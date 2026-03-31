@@ -1,6 +1,25 @@
-"""Audit logger for pipeline execution metrics."""
 
 from __future__ import annotations
+
+def write_lifecycle_event(spark, table_name: str, entity_id: str, event_type: str, event_details: str, user: str, event_ts=None):
+    """Write a lifecycle event to the entity_lifecycle_log table.
+
+    Args:
+        spark: SparkSession
+        table_name: Name of the log table (from config)
+        entity_id: Unique identifier for the entity
+        event_type: Type of event (e.g., onboarded, updated, archived)
+        event_details: Description or JSON string of event details
+        user: User or process responsible for the event
+        event_ts: Optional timestamp (UTC); if None, auto-filled
+    """
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    ts = event_ts if event_ts is not None else now
+    row = [(entity_id, event_type, event_details, user, ts)]
+    schema = "entity_id string, event_type string, event_details string, user string, event_ts timestamp"
+    spark.createDataFrame(row, schema=schema).write.mode("append").format("delta").saveAsTable(table_name)
+"""Audit logger for pipeline execution metrics."""
 
 import json
 from datetime import datetime, timezone

@@ -62,6 +62,9 @@ def load_csv_config(file_path: str) -> list[dict[str, str]]:
         _CSV_CACHE[abs_path] = rows
     return rows
 
+def get_lifecycle_log_table(config: dict) -> str:
+    return config.get("lifecycle_log_table", "audit.entity_lifecycle_log")
+
 
 def _to_row_dicts_from_table(spark, table_name: str) -> list[dict[str, str]]:
     rows = spark.table(table_name).collect()

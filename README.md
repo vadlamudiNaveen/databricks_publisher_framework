@@ -67,6 +67,43 @@ This framework provides reusable engines for different data types (files, databa
 - What it does:
   - Ingests active sources, writes landing/conformance, runs DQ, publishes to silver, and writes audit rows.
 
+## Running the Orchestrator (CLI Options)
+
+### Default: Run All File Path Sources (Dry Run)
+
+```
+python notebooks/05_orchestration/framework_orchestrator.py
+```
+
+### Run for a Specific Source
+
+You can run the orchestrator for a specific source system and/or entity using:
+
+```
+python notebooks/05_orchestration/framework_orchestrator.py --source-system cemc --source-entity countryriskdet
+```
+
+You can also filter by product name:
+
+```
+python notebooks/05_orchestration/framework_orchestrator.py --product-name connect
+```
+
+### Execute with Spark (Databricks runtime)
+
+```
+python notebooks/05_orchestration/framework_orchestrator.py --execute
+```
+
+## Archiving Data in the Bronze Layer
+
+The bronze (landing) layer is written using `add_landing_metadata()` and `write_landing()` in `landing_engine.py`. To support archiving, you can:
+
+- Add `archive_mode` and `archive_table` (or path) to your config.
+- Update `write_landing()` to optionally write to both the main and archive destinations based on config or a command-line flag.
+
+This allows you to control archiving location and behavior without code changes. See `notebooks/02_processing/landing_engine.py` for extension points.
+
 ## Unity Catalog Prerequisites For `--execute`
 `--execute` assumes target catalog/schemas/tables already exist and the runtime identity can read/write them.
 
@@ -188,11 +225,19 @@ For most sources, onboarding is metadata-driven. If you need to implement custom
 
 See the `notebooks/` folder for examples and patterns.
 
-## Data Lineage & Monitoring
+## Data Lineage, Monitoring & Change Tracking
 
 - **Audit Tables:** All pipeline runs, DQ results, and rejects are logged in dedicated audit tables for traceability.
+- **Log Table for Lifecycle Tracking:** A dedicated log table should be maintained to track changes and events throughout the lifecycle of each data entity, including onboarding, updates, and archival. This enables full traceability and auditability of all changes.
 - **Execution Plan:** The orchestrator dry-run produces a JSON plan, which can be used for lineage tracking and debugging.
 - **Monitoring:** Integrate with Databricks job monitoring and alerting for production pipelines. Consider extending audit logging for more granular lineage if needed.
+
+## Handling Images and Attachments
+
+The framework can be extended to support images and file attachments as part of the ingested data. To do this:
+- Store image or attachment file paths or binary data in the source data or as references in the metadata.
+- Update ingestion and processing logic to handle binary data or file references, ensuring files are stored in accessible locations (e.g., cloud storage, object store).
+- Document the handling of images/attachments in the onboarding guide and update relevant config files to include these fields.
 
 ## Onboarding Tips for New Users
 

@@ -43,6 +43,9 @@ def load_global_config(config_path: str) -> dict:
             payload = yaml.safe_load(f) or {}
     except yaml.YAMLError as exc:
         raise ValueError(f"Invalid YAML in global config {path}: {exc}") from exc
+    # Add default for lifecycle log table if not present
+    if "lifecycle_log_table" not in payload:
+        payload["lifecycle_log_table"] = "audit.entity_lifecycle_log"
     return _resolve_obj(payload)
 
 

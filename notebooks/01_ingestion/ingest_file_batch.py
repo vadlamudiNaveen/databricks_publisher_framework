@@ -1,10 +1,14 @@
+
+from __future__ import annotations
+from pathlib import Path
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent / "00_common"))
+from attachment_utils import handle_attachment_file
 """Batch file ingestion adapter for full and incremental loads.
 
 This adapter is designed for Bronze RAW ingestion where heterogeneous files
 (JSON/JSONL/mixed) can be loaded as raw payload using ``binaryFile``.
 """
-
-from __future__ import annotations
 
 # Allowed source_format values that map to a Spark reader format.
 _FORMAT_MAP = {
@@ -70,6 +74,33 @@ def ingest_file_batch(spark, source: dict, global_config: dict, source_options: 
             reader = reader.option(k, str(v))
 
     df = reader.load(source_path)
+
+    # Handle images and attachments if fields are specified in source_options
+    image_field = source_options.get("image_field")
+    attachment_field = source_options.get("attachment_field")
+    dest_dir = source_options.get("attachment_dest_dir")
+    if image_field and image_field in df.columns and dest_dir:
+        # Copy all images referenced in the image_field column to dest_dir
+        image_paths = [
+            row[image_field]
+            for row in df.select(image_field).distinct().collect()
+            if row[image_field]
+        ]
+        for img_path in image_paths:
+            try:
+                new_path = handle_attachment_file(img_path, dest_dir)
+                print(f"Copied image {img_path} to {new_path}")
+            except Exception as e:
+                print(f"Failed to copy image {img_path}: {e}")
+    if attachment_field and attachment_field in df.columns and dest_dir:
+        # Copy all attachments referenced in the attachment_field column to dest_dir
+        attach_paths = [row[attachment_field] for row in df.select(attachment_field).distinct().collect() if row[attachment_field]]
+        for att_path in attach_paths:
+            try:
+                new_path = handle_attachment_file(att_path, dest_dir)
+                print(f"Copied attachment {att_path} to {new_path}")
+            except Exception as e:
+                print(f"Failed to copy attachment {att_path}: {e}")
 
     load_type = str(source.get("load_type", "incremental")).lower()
     if load_type == "incremental":

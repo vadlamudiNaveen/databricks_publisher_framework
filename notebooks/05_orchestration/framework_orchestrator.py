@@ -25,6 +25,7 @@ from config_loader import (
     parse_json_cell,
     parse_json_list,
     publish_rule_for_entity,
+    get_lifecycle_log_table,
 )
 from utils import get_logger, new_load_id, truncate_str
 
@@ -44,6 +45,7 @@ from audit_logger import (
     write_pipeline_audit,
     write_reject_rows,
     write_validation_events,
+    write_lifecycle_event,
 )
 
 
@@ -186,8 +188,19 @@ def process_source(
     spark=None,
     dry_run: bool = True,
 ) -> dict:
+
     _require_source_fields(source)
     _require_runtime_config(global_config)
+
+    # Lifecycle log setup
+    lifecycle_log_table = get_lifecycle_log_table(global_config)
+    user = global_config.get("run_user", "system")
+    entity_id = f"{source.get('source_system','')}.{source.get('source_entity','')}"
+    # Log onboarding event
+    event_type = "onboarded"
+    event_details = json.dumps({k: source.get(k) for k in ['source_type', 'landing_table', 'conformance_table', 'silver_table']})
+    if spark is not None:
+        write_lifecycle_event(spark, lifecycle_log_table, entity_id, event_type, event_details, user)
 
     source_system = source["source_system"]
     source_entity = source["source_entity"]
@@ -295,6 +308,15 @@ def process_source(
 
     try:
         t0 = time.monotonic()
+        # Log update event (example: after metadata resolved)
+        event_type = "metadata_resolved"
+        event_details = json.dumps({
+            "mapping_count": len(mapping_rows),
+            "dq_rule_count": len(dq_rows),
+            "publish_rule_found": bool(publish_rule)
+        })
+        if spark is not None:
+            write_lifecycle_event(spark, lifecycle_log_table, entity_id, event_type, event_details, user)
         raw_df = _run_with_retry(
             lambda: _ingest_source(spark, source, global_config),
             max_retries=max_retries,
@@ -423,7 +445,20 @@ def process_source(
         )
 
         landing_df = add_landing_metadata(bronze_df, source_system=source_system, source_entity=source_entity, load_id=load_id)
-        write_landing(landing_df, source["landing_table"])
+        # Archive logic: get archive_table and retention_days from config or source_options_json
+        archive_table = None
+        retention_days = None
+        # Priority: source_options_json > global_config > None
+        if source_options.get("archive_table"):
+            archive_table = source_options["archive_table"]
+        elif global_config.get("archive", {}).get("archive_table"):
+            archive_table = global_config["archive"]["archive_table"]
+        if source_options.get("archive_retention_days"):
+            retention_days = int(source_options["archive_retention_days"])
+        elif global_config.get("archive", {}).get("retention_days"):
+            retention_days = int(global_config["archive"]["retention_days"])
+
+        write_landing(landing_df, source["landing_table"], archive_table=archive_table, retention_days=retention_days)
         stage_seconds["landing"] = round(time.monotonic() - t2, 3)
         required_landing_cols = {"source_system", "source_entity", "load_id", "ingest_ts"}
         landing_has_tech_cols = required_landing_cols.issubset(set(landing_df.columns))
@@ -495,7 +530,8 @@ def process_source(
             dq_columns_present={"dq_status", "dq_failed_rule"}.issubset(set(dq_df.columns)),
         )
 
-        mode = (publish_rule or {}).get("publish_mode", source["publish_mode"]).lower()
+        mode_val = (publish_rule or {}).get("publish_mode", source.get("publish_mode"))
+        mode = mode_val.lower() if mode_val else "append"
         partition_columns, zorder_columns = _publish_rule_lists(publish_rule)
         t5 = time.monotonic()
         if mode == "append":
@@ -648,6 +684,11 @@ def process_source(
             "stage_seconds": stage_seconds,
         }
     except Exception as exc:
+        # Log failure event
+        event_type = "failed"
+        event_details = truncate_str(str(exc))
+        if spark is not None:
+            write_lifecycle_event(spark, lifecycle_log_table, entity_id, event_type, event_details, user)
         _log_event(
             "source_failed",
             source=f"{source_system}.{source_entity}",
@@ -720,6 +761,10 @@ def run_all(
 
     results = []
     for source in sources:
+        # Only process sources with source_type == 'FILE' for now
+        if str(source.get('source_type', '')).strip().upper() != 'FILE':
+            _logger.info(f"Skipping source {source.get('source_system','')}.{source.get('source_entity','')} with source_type {source.get('source_type')}")
+            continue
         results.append(
             process_source(
                 config_dir=config_dir,
@@ -743,6 +788,7 @@ def main() -> None:
     args = parser.parse_args()
 
     global_config = load_global_config(args.global_config)
+    print("[DEBUG] Loaded global_config:", global_config)
     dry_run = not args.execute
 
     results = run_all(
