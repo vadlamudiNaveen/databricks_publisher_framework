@@ -1,0 +1,4 @@
+tenant,brand,product_name,source_system,source_entity,silver_table,publish_mode,merge_key,sequence_column,delete_handling,schema_evolution_flag,optimize_zorder_json,partition_columns_json
+ikea,ikea,customer360,hip,customer,${UC_CATALOG}.${UC_SILVER_SCHEMA}.customer,merge,customer_id,ingest_ts,soft_delete,true,"[""customer_id""]","[""ingest_date""]"
+ikea,ikea,product360,erp,product,${UC_CATALOG}.${UC_SILVER_SCHEMA}.product,merge,product_id,ingest_ts,ignore,false,"[""product_id""]","[]"
+ikea,ikea,service360,crm,ticket,${UC_CATALOG}.${UC_SILVER_SCHEMA}.ticket,append,ticket_id,ingest_ts,ignore,true,"[""ticket_id""]","[]"

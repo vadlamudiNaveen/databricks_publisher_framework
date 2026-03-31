@@ -1,0 +1,16 @@
+{
+  "pythonVersion": "3.11",
+  "venvPath": ".",
+  "venv": ".venv",
+  "extraPaths": [
+    "notebooks/00_common",
+    "notebooks/01_ingestion",
+    "notebooks/02_processing",
+    "notebooks/03_publish",
+    "notebooks/04_audit",
+    "notebooks/05_orchestration",
+    "notebooks/06_analysis"
+  ],
+  "reportMissingImports": "warning",
+  "reportMissingModuleSource": "none"
+}

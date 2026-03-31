@@ -1,0 +1,30 @@
+{
+  "name": "metadata_driven_ingestion_pipeline",
+  "catalog": "main",
+  "schema": "framework",
+  "edition": "ADVANCED",
+  "continuous": false,
+  "channel": "CURRENT",
+  "development": true,
+  "photon": true,
+  "libraries": [
+    { "notebook": { "path": "/Repos/databricks-ingestion-framework/notebooks/00_common/global_config" } },
+    { "notebook": { "path": "/Repos/databricks-ingestion-framework/notebooks/00_common/databricks_launchpad_widgets" } },
+    { "notebook": { "path": "/Repos/databricks-ingestion-framework/notebooks/01_ingestion/ingest_file_autoloader" } },
+    { "notebook": { "path": "/Repos/databricks-ingestion-framework/notebooks/01_ingestion/ingest_file_batch" } },
+    { "notebook": { "path": "/Repos/databricks-ingestion-framework/notebooks/01_ingestion/ingest_jdbc" } },
+    { "notebook": { "path": "/Repos/databricks-ingestion-framework/notebooks/01_ingestion/ingest_api" } },
+    { "notebook": { "path": "/Repos/databricks-ingestion-framework/notebooks/02_processing/landing_engine" } },
+    { "notebook": { "path": "/Repos/databricks-ingestion-framework/notebooks/02_processing/conformance_engine" } },
+    { "notebook": { "path": "/Repos/databricks-ingestion-framework/notebooks/02_processing/dq_engine" } },
+    { "notebook": { "path": "/Repos/databricks-ingestion-framework/notebooks/03_publish/publish_silver" } },
+    { "notebook": { "path": "/Repos/databricks-ingestion-framework/notebooks/04_audit/audit_logger" } },
+    { "notebook": { "path": "/Repos/databricks-ingestion-framework/notebooks/05_orchestration/framework_orchestrator" } }
+  ],
+  "configuration": {
+    "control.source_registry": "main.control.source_registry",
+    "control.column_mapping": "main.control.column_mapping",
+    "control.dq_rules": "main.control.dq_rules",
+    "control.publish_rules": "main.control.publish_rules"
+  }
+}

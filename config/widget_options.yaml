@@ -1,0 +1,49 @@
+# Databricks launchpad widget option lists.
+# Keep dropdown defaults and selectable values centralized for easy updates.
+
+widget_options:
+  boolean_values:
+    - "True"
+    - "False"
+
+  environments:
+    - dev
+    - qa
+    - prod
+
+  metadata_file_name:
+    - source_registry.csv
+    - column_mapping.csv
+    - dq_rules.csv
+    - publish_rules.csv
+
+  metadata_folder_name:
+    - /metadata/dev
+    - /metadata/qa
+    - /metadata/prod
+    - cbr_data_engineering_library/data_publisher/resources
+
+  metadata_base_mount_point:
+    - /Volumes/cbr_dev
+    - /Volumes/cbr_qa
+    - /Volumes/cbr_prod
+    - /mnt/aa_inbound
+
+  paths_config_path:
+    - config/path_configs/pia_data_paths.dev.json
+    - config/path_configs/pia_data_paths.qa.json
+    - config/path_configs/pia_data_paths.prod.json
+
+  ikea_dropzone_mounts:
+    - /mnt/dropzone/connect/cemccountryriskdet
+    - /mnt/dropzone/connect/cemcitemmatplantrep
+    - /mnt/dropzone/connect/cemcmssrepreceiver
+    - /mnt/dropzone/connect/cemcmtrlftsdetail
+    - /mnt/dropzone/pia/commondimensionsprd
+    - /mnt/dropzone/pia/itemsummarypublicprd
+
+  source_formats:
+    - binaryFile
+    - json
+    - jsonl
+    - json_jsonl_mixed

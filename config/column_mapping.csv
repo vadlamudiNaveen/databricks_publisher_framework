@@ -1,0 +1,6 @@
+tenant,brand,product_name,source_system,source_entity,source_column,landing_column,conformance_column,silver_column,source_type_name,target_type_name,nullable_flag,default_value,transform_expression,is_active
+ikea,ikea,customer360,hip,customer,Cust_ID,cust_id,customer_id,customer_id,string,string,false,,trim(Cust_ID),true
+ikea,ikea,customer360,hip,customer,Cust_Name,cust_name,customer_name,customer_name,string,string,true,,trim(Cust_Name),true
+ikea,ikea,customer360,hip,customer,DOB,dob,date_of_birth,date_of_birth,string,date,true,,to_date(DOB,'yyyy-MM-dd'),true
+ikea,ikea,product360,erp,product,PROD_ID,prod_id,product_id,product_id,int,bigint,false,,cast(PROD_ID as bigint),true
+ikea,ikea,service360,crm,ticket,status,status,status,status,string,string,true,OPEN,upper(status),true

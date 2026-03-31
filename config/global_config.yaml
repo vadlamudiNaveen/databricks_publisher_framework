@@ -1,0 +1,91 @@
+organization:
+  client_name: IKEA
+  framework_name: ikea-metadata-ingestion-framework
+  environment: ${IKEA_ENV:dev}
+  environment_default: dev
+  environment_allowed:
+    - dev
+    - qa
+    - prod
+  tenant: ${IKEA_TENANT}
+
+execution:
+  default_mode: dry_run
+  fail_fast: true
+  default_timeout_seconds: 60
+  default_load_type: incremental
+  max_retries: 2
+  retry_backoff_seconds: 2
+  post_publish_optimize: true
+  retry_by_source_type:
+    api:
+      max_retries: 3
+      backoff_seconds: 3
+    jdbc:
+      max_retries: 2
+      backoff_seconds: 2
+    file:
+      max_retries: 1
+      backoff_seconds: 2
+
+ui:
+  widget_options_file: config/widget_options.yaml
+
+databricks:
+  host: ${DATABRICKS_HOST}
+  workspace_id: ${DATABRICKS_WORKSPACE_ID}
+  catalog: ${UC_CATALOG}
+  bronze_schema: ${UC_BRONZE_SCHEMA}
+  silver_schema: ${UC_SILVER_SCHEMA}
+  audit_schema: ${UC_AUDIT_SCHEMA}
+  checkpoint_root: ${CHECKPOINT_ROOT}
+  schema_tracking_root: ${SCHEMA_TRACKING_ROOT}
+
+metadata:
+  mode: csv
+  csv_root: config
+  tables:
+    source_registry: ${UC_CATALOG}.control.source_registry
+    column_mapping: ${UC_CATALOG}.control.column_mapping
+    dq_rules: ${UC_CATALOG}.control.dq_rules
+    publish_rules: ${UC_CATALOG}.control.publish_rules
+
+connections:
+  jdbc_profiles:
+    ikea_erp:
+      url: ${IKEA_ERP_JDBC_URL}
+      driver: ${IKEA_ERP_JDBC_DRIVER}
+      user_env: IKEA_ERP_JDBC_USER
+      password_env: IKEA_ERP_JDBC_PASSWORD
+      fetchsize: 10000
+    oracle_dev:
+      # Oracle DB — driver jar must be on the Databricks cluster classpath.
+      # Recommended: ojdbc11.jar (Oracle JDBC Driver 21.x)
+      # Install via: Databricks cluster Libraries → Maven → com.oracle.database.jdbc:ojdbc11:21.9.0.0
+      url: jdbc:oracle:thin:@//${ORACLE_DEV_HOST:localhost}:${ORACLE_DEV_PORT:1521}/${ORACLE_DEV_SERVICE}
+      driver: oracle.jdbc.OracleDriver
+      user_env: ORACLE_DEV_USER
+      password_env: ORACLE_DEV_PASSWORD
+      fetchsize: 5000
+      # Optional: session-level properties forwarded to the JDBC driver
+      oracle.jdbc.timezoneAsRegion: "false"
+      oracle.net.CONNECT_TIMEOUT: "30000"
+  api_profiles:
+    ikea_crm:
+      base_url: ${IKEA_CRM_API_BASE_URL}
+      auth_type: bearer
+      token_env: IKEA_CRM_API_TOKEN
+      timeout_seconds: 45
+  file_defaults:
+    format: binaryFile
+    schema_evolution_mode: rescue
+    infer_column_types: true
+    use_notifications: false
+    raw_payload_mode: binary_file
+
+audit:
+  pipeline_runs_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.pipeline_runs
+  dq_results_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.dq_rule_results
+  bronze_dq_results_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.bronze_dq_results
+  validation_events_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.validation_events
+  rejects_table: ${UC_CATALOG}.dq.rejects

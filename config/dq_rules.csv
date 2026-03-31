@@ -1,0 +1,4 @@
+tenant,brand,product_name,source_system,source_entity,column_name,rule_name,rule_type,rule_expression,severity,on_violation,is_active
+ikea,ikea,customer360,hip,customer,customer_id,NOT_NULL,expression,customer_id IS NOT NULL,high,reject,true
+ikea,ikea,customer360,hip,customer,date_of_birth,VALID_DOB,expression,date_of_birth IS NULL OR date_of_birth <= current_date(),medium,reject,true
+ikea,ikea,service360,crm,ticket,status,VALID_STATUS,expression,status IN ('OPEN','CLOSED','PENDING'),medium,reject,true

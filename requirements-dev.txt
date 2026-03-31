@@ -1,0 +1,5 @@
+pytest==8.4.0
+ruff==0.12.5
+PyYAML==6.0.2
+requests==2.32.3
+pyspark==3.5.1
