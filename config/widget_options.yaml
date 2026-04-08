@@ -41,6 +41,11 @@ widget_options:
     - /mnt/dropzone/connect/cemcmtrlftsdetail
     - /mnt/dropzone/pia/commondimensionsprd
     - /mnt/dropzone/pia/itemsummarypublicprd
+    - abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/connect/cemccountryriskdet/deltaload
+    - abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/item
+    - abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/valuebag
+    - abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/bas
+    - abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/metadata/sttm
 
   source_formats:
     - binaryFile

@@ -9,24 +9,38 @@ This repository now includes Databricks Asset Bundles files:
 - `resources/jobs.yml`
 - `resources/pipelines.yml`
 
+Note: default bundle deployment path currently includes jobs only. The pipeline resource in `resources/pipelines.yml` requires Unity Catalog `CREATE TABLE` privileges on target schemas.
+
+Target isolation defaults are preconfigured:
+- `dev` uses `main.bronze_dev`, `main.silver_dev`, `main.audit_dev`, `main.control_dev`
+- `prod` uses `main.bronze`, `main.silver`, `main.audit`, `main.control`
+
 Use bundle commands from the repository root:
 
 ```bash
-databricks bundle validate -t dev --var="databricks_host=<https://your-workspace-host>"
-databricks bundle deploy -t dev --var="databricks_host=<https://your-workspace-host>"
+databricks bundle validate -t dev
+databricks bundle deploy -t dev
 ```
 
 Run one-time setup jobs:
 
 ```bash
-databricks bundle run -t dev framework_initialize_infrastructure_once --var="databricks_host=<https://your-workspace-host>"
-databricks bundle run -t dev framework_setup_wizard_once --var="databricks_host=<https://your-workspace-host>"
+databricks bundle run -t dev framework_initialize_infrastructure_once
+databricks bundle run -t dev framework_setup_wizard_once
 ```
 
 Run recurring orchestrator job:
 
 ```bash
-databricks bundle run -t dev framework_orchestrator_runtime --var="databricks_host=<https://your-workspace-host>"
+databricks bundle run -t dev framework_orchestrator_runtime
+```
+
+Promote and run in prod target:
+
+```bash
+databricks bundle validate -t prod
+databricks bundle deploy -t prod
+databricks bundle run -t prod framework_orchestrator_runtime
 ```
 
 ## 1. Update Configuration

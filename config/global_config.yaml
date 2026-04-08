@@ -34,12 +34,15 @@ ui:
 databricks:
   host: ${DATABRICKS_HOST}
   workspace_id: ${DATABRICKS_WORKSPACE_ID}
-  catalog: ${UC_CATALOG}
-  bronze_schema: ${UC_BRONZE_SCHEMA}
-  silver_schema: ${UC_SILVER_SCHEMA}
-  audit_schema: ${UC_AUDIT_SCHEMA}
+  catalog: ${UC_CATALOG:eng511_development_bronze}
+  bronze_schema: ${UC_BRONZE_SCHEMA:akr_tst}
+  silver_schema: ${UC_SILVER_SCHEMA:silver}
+  audit_schema: ${UC_AUDIT_SCHEMA:audit}
+  control_schema: ${UC_CONTROL_SCHEMA:control}
   checkpoint_root: ${CHECKPOINT_ROOT}
   schema_tracking_root: ${SCHEMA_TRACKING_ROOT}
+  external_location: ${UC_EXTERNAL_LOCATION:abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/}
+  use_external_location: ${UC_USE_EXTERNAL_LOCATION:true}
 
 external_locations:
   env_roots:
@@ -54,10 +57,10 @@ metadata:
   mode: csv
   csv_root: config
   tables:
-    source_registry: ${UC_CATALOG}.control.source_registry
-    column_mapping: ${UC_CATALOG}.control.column_mapping
-    dq_rules: ${UC_CATALOG}.control.dq_rules
-    publish_rules: ${UC_CATALOG}.control.publish_rules
+    source_registry: ${UC_CATALOG}.${UC_CONTROL_SCHEMA}.source_registry
+    column_mapping: ${UC_CATALOG}.${UC_CONTROL_SCHEMA}.column_mapping
+    dq_rules: ${UC_CATALOG}.${UC_CONTROL_SCHEMA}.dq_rules
+    publish_rules: ${UC_CATALOG}.${UC_CONTROL_SCHEMA}.publish_rules
 
 connections:
   jdbc_profiles:
@@ -97,4 +100,4 @@ audit:
   dq_results_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.dq_rule_results
   bronze_dq_results_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.bronze_dq_results
   validation_events_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.validation_events
-  rejects_table: ${UC_CATALOG}.dq.rejects
+  rejects_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.rejects

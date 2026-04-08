@@ -2,7 +2,7 @@ bundle:
   name: databricks-ingestion-framework
 
 include:
-  - resources/*.yml
+  - resources/jobs.yml
 
 sync:
   include:
@@ -14,7 +14,8 @@ sync:
 
 variables:
   databricks_host:
-    description: Databricks workspace host, for example https://adb-1234567890123456.7.azuredatabricks.net
+    description: Databricks workspace host
+    default: https://adb-1274191232328482.2.azuredatabricks.net
 
   run_as_service_principal:
     description: Optional service principal application ID used to run jobs (leave empty for current user)
@@ -67,17 +68,29 @@ variables:
 targets:
   dev:
     default: true
+    mode: development
     workspace:
-      host: ${var.databricks_host}
+      host: https://adb-1274191232328482.2.azuredatabricks.net
       root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
     variables:
+      uc_catalog: main
+      uc_bronze_schema: bronze_dev
+      uc_silver_schema: silver_dev
+      uc_audit_schema: audit_dev
+      uc_control_schema: control_dev
       min_workers: 1
       max_workers: 2
 
   prod:
+    mode: production
     workspace:
-      host: ${var.databricks_host}
+      host: https://adb-1274191232328482.2.azuredatabricks.net
       root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
     variables:
+      uc_catalog: main
+      uc_bronze_schema: bronze
+      uc_silver_schema: silver
+      uc_audit_schema: audit
+      uc_control_schema: control
       min_workers: 2
       max_workers: 8
