@@ -7,6 +7,7 @@ include:
 sync:
   include:
     - notebooks/**
+    - notebooks_ipynb/**
     - config/**
     - pipelines/**
     - sql/**
@@ -65,6 +66,10 @@ variables:
     description: Maximum workers for autoscaling jobs
     default: 2
 
+  existing_cluster_id:
+    description: Existing cluster ID for job execution (empty = create new job clusters)
+    default: ""
+
 targets:
   dev:
     default: true
@@ -78,6 +83,7 @@ targets:
       uc_silver_schema: silver_dev
       uc_audit_schema: audit_dev
       uc_control_schema: control_dev
+      existing_cluster_id: "0408-062709-xu0nb836"
       min_workers: 1
       max_workers: 2
 
