@@ -97,6 +97,15 @@ connect,cemc,countryriskdet,FILE,/mnt/dropzone/connect/cemccountryriskdet,main.b
 | `conformance_table` | `main.bronze.connect_countryriskdet_conformance` | _________ |
 | `silver_table` | `main.silver.connect_countryriskdet` | _________ |
 
+Optional orchestration metadata per source:
+
+| Field | Example | Purpose |
+|-------|---------|---------|
+| `scheduler_name` | `daily_connect_job` | Logical scheduler/job name |
+| `schedule_cron` | `0 0 2 * * ?` | Cron schedule metadata |
+| `retention_days` | `30` | Retention policy metadata |
+| `sttm_profile` | `standard_transfer` | Transfer profile metadata |
+
 ### 5. Optional: Column Mappings (`config/column_mapping.csv`)
 
 If you need to rename/transform columns:
@@ -148,6 +157,11 @@ Drag-drop `notebooks_ipynb/` folder into Databricks Workspace
 from setup_wizard import run_complete_setup
 success = run_complete_setup("/Workspace/path/to/config/global_config.yaml")
 ```
+
+Alternative:
+- Use `pipelines/databricks_setup_jobs.json` to create two one-time setup jobs:
+  - `framework_initialize_infrastructure_once`
+  - `framework_setup_wizard_once`
 
 **That's it!** Everything else is automated ✅
 
@@ -216,5 +230,12 @@ Time to Production:
 1. ✏️ Your Databricks workspace details
 2. ✏️ Your data source locations/credentials
 3. ✏️ Your UC catalog/schema names
+
+**Recurring pipeline should run only:**
+- `notebooks/05_orchestration/framework_orchestrator.py`
+
+**One-time setup should run:**
+- `notebooks/05_orchestration/initialize_framework.py`
+- `notebooks/05_orchestration/setup_wizard.py`
 
 **Everything else is automated!**

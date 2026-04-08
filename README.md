@@ -40,6 +40,16 @@ This framework provides reusable engines for different data types (files, databa
 2. Import notebooks from `notebooks_ipynb/`
 3. Run the setup wizard notebook (creates everything automatically)
 
+### Orchestration Files In `notebooks/05_orchestration`
+- `framework_orchestrator.py`: recurring runtime execution (ingest -> landing -> conformance -> DQ -> silver)
+- `initialize_framework.py`: one-time idempotent Unity Catalog and table provisioning
+- `setup_wizard.py`: one-time guided setup and validation workflow
+
+Pipeline usage model:
+- Lakeflow runtime pipeline should run only `framework_orchestrator.py`
+- One-time setup jobs should run `initialize_framework.py` and `setup_wizard.py`
+- Setup jobs template is provided in `pipelines/databricks_setup_jobs.json`
+
 ### For Local Development (Without Spark)
 1. Set environment values from `config/.env.example`.
 2. Update `config/global_config.yaml` for your environment.
@@ -165,6 +175,10 @@ This allows you to control archiving location and behavior without code changes.
 ## Unity Catalog Prerequisites For `--execute`
 `--execute` assumes target catalog/schemas/tables already exist and the runtime identity can read/write them.
 
+Recommended:
+- Run `setup_wizard.py` once before recurring execution to auto-create catalog, schemas, control tables, and audit tables.
+- Use `pipelines/databricks_setup_jobs.json` to create one-time setup jobs.
+
 ### 1) Required Environment Variables
 Set these before execution (from `config/.env.example`):
 - `UC_CATALOG`
@@ -184,8 +198,8 @@ Ensure these are set in `config/global_config.yaml`:
 - `audit.dq_results_table`
 - `audit.rejects_table`
 
-### 3) Required UC Objects
-Create these before run:
+### 3) Required UC Objects (If Skipping Setup Wizard)
+Create these before run only if you do not execute `setup_wizard.py`:
 1. Catalog: `UC_CATALOG`
 2. Schemas:
 	- `UC_BRONZE_SCHEMA`
@@ -227,6 +241,11 @@ The Databricks job principal/service principal must have:
 	- `landing_table_type`, `conformance_table_type`, `silver_table_type`: `managed` or `external`
 	- `landing_table_path`, `conformance_table_path`, `silver_table_path`: required when table type is `external`
 - Default behavior is `managed` when these fields are not provided.
+- Additional optional source metadata supported:
+	- `scheduler_name`
+	- `schedule_cron`
+	- `retention_days`
+	- `sttm_profile`
 - Recommended pattern:
 	- Landing (raw/bronze): external allowed and often preferred for storage governance.
 	- Conformance/Silver: managed by default unless external is required by policy/integration.

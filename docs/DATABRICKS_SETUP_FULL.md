@@ -53,6 +53,11 @@ success = initialize_framework(config_path)
 print(f"Framework initialization: {'✓ SUCCESS' if success else '✗ FAILED'}")
 ```
 
+Alternative one-time setup path:
+- Use `pipelines/databricks_setup_jobs.json` to create Databricks Jobs for:
+  - `notebooks/05_orchestration/initialize_framework`
+  - `notebooks/05_orchestration/setup_wizard`
+
 **What gets created:**
 - ✓ Catalog (e.g., `main`)
 - ✓ Schemas: `bronze`, `silver`, `audit`, `control`
@@ -92,6 +97,10 @@ CREATE TABLE IF NOT EXISTS source_registry (
     pre_landing_transform_notebook STRING,
     post_conformance_transform_notebook STRING,
     custom_publish_notebook STRING,
+    scheduler_name STRING,
+    schedule_cron STRING,
+    retention_days INT,
+    sttm_profile STRING,
     landing_table_type STRING, landing_table_path STRING,
     conformance_table_type STRING, conformance_table_path STRING,
     silver_table_type STRING, silver_table_path STRING

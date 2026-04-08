@@ -113,7 +113,7 @@ def _create_notebook_cells(py_file: Path, rel_path: Path, code_sections: list[di
     # Title cell
     cells.append({
         "cell_type": "markdown",
-        "metadata": {},
+        "metadata": {"language": "markdown"},
         "source": [
             f"# {py_file.stem}\n",
             f"\n",
@@ -138,7 +138,7 @@ def _create_notebook_cells(py_file: Path, rel_path: Path, code_sections: list[di
         # Add markdown explanation before code
         cells.append({
             "cell_type": "markdown",
-            "metadata": {},
+            "metadata": {"language": "markdown"},
             "source": [
                 f"## Section {i}: {section['description']}\n",
                 f"\n",
@@ -149,7 +149,7 @@ def _create_notebook_cells(py_file: Path, rel_path: Path, code_sections: list[di
         # Add code cell
         cells.append({
             "cell_type": "code",
-            "metadata": {},
+            "metadata": {"language": "python"},
             "source": [line if line.endswith("\n") else (line + "\n") for line in source_lines],
             "outputs": [],
             "execution_count": None,

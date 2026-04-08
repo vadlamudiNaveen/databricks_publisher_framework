@@ -104,7 +104,13 @@ Instead of writing custom notebooks per source, sources are described in four CS
 
 | Module | Purpose |
 |---|---|
-| `framework_orchestrator.py` | Master coordinator — reads all metadata, calls all engines, handles retry, writes audit |
+| `framework_orchestrator.py` | Master runtime coordinator — reads all metadata, calls all engines, handles retry, writes audit |
+| `initialize_framework.py` | One-time infrastructure provisioning for catalog, schemas, control and audit tables |
+| `setup_wizard.py` | One-time setup workflow that verifies environment and runs end-to-end setup checks |
+
+Runtime model:
+- Recurring pipeline execution should run `framework_orchestrator.py`.
+- One-time setup can run via `setup_wizard.py` or the job template in `pipelines/databricks_setup_jobs.json`.
 
 ---
 
@@ -138,6 +144,10 @@ The primary control table. One row per source entity.
 | `pre_landing_transform_notebook` | optional | `path/to/notebook` | Called after ingest, before landing write |
 | `post_conformance_transform_notebook` | optional | `path/to/notebook` | Called after conformance, before DQ |
 | `custom_publish_notebook` | optional | `path/to/notebook` | Fully replaces publish stage |
+| `scheduler_name` | optional | `daily_connect_job` | Scheduler metadata label per source |
+| `schedule_cron` | optional | `0 0 2 * * ?` | Cron metadata per source |
+| `retention_days` | optional | `30` | Retention metadata per source |
+| `sttm_profile` | optional | `standard_transfer` | Transfer profile metadata per source |
 
 **Supported FILE formats** (via `_FORMAT_MAP`):
 
