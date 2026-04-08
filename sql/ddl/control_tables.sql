@@ -1,6 +1,13 @@
-CREATE SCHEMA IF NOT EXISTS main.control;
+-- Control table DDL
+-- Default target: main.control
+-- If needed, replace main/control with your target catalog/schema.
 
-CREATE TABLE IF NOT EXISTS main.control.source_registry (
+-- CREATE SCHEMA IF NOT EXISTS main.control;
+
+/*
+Run the statements below in Databricks SQL (Delta syntax).
+
+CREATE TABLE IF NOT EXISTS control.source_registry (
   tenant STRING,
   brand STRING,
   region STRING,
@@ -28,10 +35,16 @@ CREATE TABLE IF NOT EXISTS main.control.source_registry (
   source_options_json STRING,
   pre_landing_transform_notebook STRING,
   post_conformance_transform_notebook STRING,
-  custom_publish_notebook STRING
+  custom_publish_notebook STRING,
+  landing_table_type STRING,
+  landing_table_path STRING,
+  conformance_table_type STRING,
+  conformance_table_path STRING,
+  silver_table_type STRING,
+  silver_table_path STRING
 ) USING DELTA;
 
-CREATE TABLE IF NOT EXISTS main.control.column_mapping (
+CREATE TABLE IF NOT EXISTS control.column_mapping (
   tenant STRING,
   brand STRING,
   product_name STRING,
@@ -49,7 +62,7 @@ CREATE TABLE IF NOT EXISTS main.control.column_mapping (
   is_active BOOLEAN
 ) USING DELTA;
 
-CREATE TABLE IF NOT EXISTS main.control.dq_rules (
+CREATE TABLE IF NOT EXISTS control.dq_rules (
   tenant STRING,
   brand STRING,
   product_name STRING,
@@ -64,7 +77,7 @@ CREATE TABLE IF NOT EXISTS main.control.dq_rules (
   is_active BOOLEAN
 ) USING DELTA;
 
-CREATE TABLE IF NOT EXISTS main.control.publish_rules (
+CREATE TABLE IF NOT EXISTS control.publish_rules (
   tenant STRING,
   brand STRING,
   product_name STRING,
@@ -79,3 +92,4 @@ CREATE TABLE IF NOT EXISTS main.control.publish_rules (
   optimize_zorder_json STRING,
   partition_columns_json STRING
 ) USING DELTA;
+*/

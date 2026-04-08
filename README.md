@@ -1,5 +1,6 @@
-# IKEA Databricks Ingestion Framework
+# Metadata-Driven Databricks Ingestion Framework
 
+> Enterprise-grade, configuration-first data ingestion and processing framework for Databricks. Onboard new data sources without code changes—just update metadata.
 
 **What is this?**
 
@@ -40,6 +41,52 @@ This framework provides reusable engines for different data types (files, databa
 6. Execute dry-run orchestration: `python notebooks/05_orchestration/framework_orchestrator.py`.
 7. In Databricks runtime, run with Spark enabled: `python notebooks/05_orchestration/framework_orchestrator.py --execute`.
 
+## Copy-Paste Commands
+
+### 1) Setup Local Python Environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+```
+
+### 2) Validate Metadata Config Files
+
+```bash
+python scripts/validate_configs.py
+```
+
+### 3) Generate Databricks Notebooks (.ipynb)
+
+```bash
+python scripts/generate_notebooks_ipynb.py
+```
+
+### 4) Run Orchestrator Dry-Run (All Active Sources)
+
+```bash
+python notebooks/05_orchestration/framework_orchestrator.py
+```
+
+### 5) Run Orchestrator Dry-Run (Single Source)
+
+```bash
+python notebooks/05_orchestration/framework_orchestrator.py --product-name connect --source-system cemc --source-entity countryriskdet --pk-check-summary
+```
+
+### 6) Run Orchestrator Execute Mode (Databricks Spark Runtime)
+
+```bash
+python notebooks/05_orchestration/framework_orchestrator.py --execute --pk-check-summary
+```
+
+### 7) Run With Parallel Workers
+
+```bash
+python notebooks/05_orchestration/framework_orchestrator.py --execute --parallel 4 --pk-check-summary
+```
+
 ## Run And Verify
 
 ### Local Verification (No Spark Required)
@@ -59,6 +106,9 @@ This framework provides reusable engines for different data types (files, databa
 	- Produces a JSON execution plan from active metadata without Spark writes.
 6. Run orchestrator dry-run for one source:
 	- `python notebooks/05_orchestration/framework_orchestrator.py --product-name connect --source-system cemc --source-entity countryriskdet`
+	- If this returns `[]`, your filters do not match an active row in `config/source_registry.csv`.
+	- Use `python notebooks/05_orchestration/framework_orchestrator.py --product-name connect` to run all active connect sources.
+	- Activate the sample `sales/crm/accounts` row in `config/source_registry.csv` before using sales/crm filters.
 	- Useful to validate a single source onboarding before full runs.
 
 ### Databricks Execution (Spark Required)
@@ -156,23 +206,63 @@ The Databricks job principal/service principal must have:
 	- `incremental`: uses `watermark_column` + `incremental_start_value` from `source_options_json`.
 	- `full`: reads full source.
 
+## Primary Key DQ Checks (Built-in)
+- The DQ engine now enforces primary key quality automatically when `primary_key` is configured in `config/source_registry.csv`.
+- Built-in checks:
+	- `primary_key_not_null`: fails rows where any PK column is null.
+	- `primary_key_unique`: fails rows where PK (including composite keys) is duplicated.
+- These checks run in addition to metadata-driven DQ rules from `config/dq_rules.csv`.
+- Failed PK checks are appended into `dq_failed_rule` and marked as `dq_status=FAIL`.
+
+## Managed vs External Tables
+- The framework supports per-layer storage mode using source metadata:
+	- `landing_table_type`, `conformance_table_type`, `silver_table_type`: `managed` or `external`
+	- `landing_table_path`, `conformance_table_path`, `silver_table_path`: required when table type is `external`
+- Default behavior is `managed` when these fields are not provided.
+- Recommended pattern:
+	- Landing (raw/bronze): external allowed and often preferred for storage governance.
+	- Conformance/Silver: managed by default unless external is required by policy/integration.
+
+## External Location Setup
+- External locations must be created by platform/IDNAP (metastore-level admins).
+- Use template SQL in:
+	- `sql/ddl/external_locations.sql`
+	- `sql/ddl/external_table_templates.sql`
+- After external locations and grants are ready, onboard sources by setting external table type/path metadata in `config/source_registry.csv`.
+
 ## Environment Parameterization
-- `IKEA_ENV` defaults to `dev` via `config/global_config.yaml` (`${IKEA_ENV:dev}`).
+- `ENVIRONMENT` defaults to `dev` via `config/global_config.yaml` (`${ENVIRONMENT:dev}`).
 - Allowed environments: dev, qa, prod.
 - All environment-specific values (catalog/schema/paths/hosts/secrets) come from env variables and config files.
+- Change environment at runtime: `export ENVIRONMENT=prod && python notebooks/05_orchestration/framework_orchestrator.py --execute`
 
 ## Databricks Launchpad Widgets
 - Widget options are centralized in `config/widget_options.yaml`.
 - Notebook helper for widget creation: `notebooks/00_common/databricks_launchpad_widgets.py`.
 - Default widget environment is set to `dev`.
 
-## ENG511 Dev Dropzone Sources Onboarded
-- `/mnt/dropzone/connect/cemccountryriskdet` (mixed JSON/JSONL)
-- `/mnt/dropzone/connect/cemcitemmatplantrep` (mixed JSON/JSONL)
-- `/mnt/dropzone/connect/cemcmssrepreceiver` (mixed JSON/JSONL, schema evolution)
-- `/mnt/dropzone/connect/cemcmtrlftsdetail` (mixed JSON/JSONL)
-- `/mnt/dropzone/pia/commondimensionsprd` (JSONL)
-- `/mnt/dropzone/pia/itemsummarypublicprd` (complex JSON)
+## Example Sources & Walkthroughs
+
+The framework supports multiple data sources. See [Examples](docs/examples/) for end-to-end walkthroughs:
+
+- **CSV/Parquet Files** (File Source): Batch ingest from cloud storage
+- **JDBC Database** (Oracle, PostgreSQL, MySQL): Direct database queries with watermark-based incremental loads
+- **REST APIs** (JSON/JSONL): Polling with pagination and rate limit handling
+- **Streaming** (File Auto Loader): Continuous ingestion as files arrive
+
+Example configurations are provided in `docs/examples/` for common patterns.
+
+## Metadata Schema Documentation
+
+All control metadata follows strict JSON schemas for validation:
+
+- `schemas/source_registry.schema.json` - Source configuration schema
+- `schemas/column_mapping.schema.json` - Column transformation schema
+- `schemas/dq_rules.schema.json` - Data quality rules schema
+- `schemas/publish_rules.schema.json` - Silver publish configuration
+- `schemas/source_options.schema.json` - Source-specific options
+
+Use `python scripts/validate_configs.py` to validate your configs against schemas.
 
 ## Raw File Analysis
 - Analysis helper: `notebooks/06_analysis/raw_json_jsonl_analysis.py`
@@ -193,17 +283,89 @@ The Databricks job principal/service principal must have:
 
 ## Processing Flow
 1. Source routing from `source_registry`
-2. Ingestion adapter (Auto Loader/JDBC/API)
-3. Landing write with technical metadata
+2. Ingestion adapter (Auto Loader/JDBC/API/Custom)
+3. Landing write with technical metadata + Bronze DQ checks
 4. Conformance from column mapping
-5. DQ checks from rules metadata
-6. Silver publish (append/merge)
-7. Audit logging
+5. Silver DQ checks from rules metadata
+6. Silver publish (append/merge) with optional optimization
+7. Audit logging (pipeline runs, DQ results, rejects, alerts)
+8. Performance monitoring and alerting
 
-## Notes
+## Advanced Features
+
+### Error Recovery & Transactions
+- **TransactionManager**: Automatic checkpoint creation at each stage
+- **Rollback support**: Failed downstream stages can trigger upstream rollbacks
+- **Resume capability**: Restart from last successful checkpoint (`--resume-from <checkpoint>`)
+- Automatic retry with exponential backoff per source type
+
+### Monitoring & Alerting
+- **AlertManager**: Real-time alerts for:
+  - DQ failure rate thresholds
+  - Retry exhaustion
+  - Performance degradation (vs. baseline)
+- **Metrics collection**: Query execution times, data throughput, row counts
+- **Audit tables**: All actions logged to centralized `audit` schema
+- SQL monitoring queries included: `sql/monitoring/monitoring_queries.sql`
+
+### Performance Optimization
+- **Query optimization advisor**: Recommendations for partitioning, Z-order, statistics
+- **Automatic OPTIMIZE**: Post-publish table optimization for Delta tables
+- **Parallel source processing**: `--parallel <n>` flag for concurrent ingestion (v1.5+)
+
+### Secrets Management
+- **Pluggable backends**: Environment variables (default) or Databricks Secrets
+- **Secure credential handling**: All credentials masked in logs
+- Configure via `secrets.backend` in `global_config.yaml`
+
+### Plugin Architecture
+- **Custom adapters**: Extend framework with custom source types
+- **AdapterRegistry**: Central registry for all ingestion adapters
+- **Auto-discovery**: Load adapters from configured modules
+- Example: Add Kafka, Snowflake, S3 Select support without modifying core
+
+### Infrastructure-as-Code (Terraform)
+- **Auto-provision**: Databases, schemas, tables, permissions
+- **Multi-environment**: Seamless dev/qa/prod deployments
+- **Drift detection**: Terraform validates deployed state
+- See `terraform/` directory for templates and examples
+
+## Architecture & Design Decisions
+
+This framework is built on key architectural principles. See `docs/adr/` for detailed Architecture Decision Records (ADRs):
+
+- **ADR-001**: Auto Loader vs. Delta Live Tables
+- **ADR-002**: CSV Metadata vs. Databricks Control Tables
+- **ADR-003**: Sequential vs. Parallel Processing
+- **ADR-004**: Environment Parameterization Strategy
+- **ADR-005**: Secrets Management Integration
+
+## Deployment & Operations
+
+### Development Environment
+1. Clone repository  
+2. Copy `config/.env.example` to `config/.env`
+3. Fill in your Databricks workspace details
+4. Run `pytest` to validate setup
+
+### Production Deployment
+1. Use Terraform to provision infrastructure: `cd terraform && terraform apply`
+2. Configure Databricks job with orchestrator script
+3. Set environment variables in job configuration
+4. Enable audit logging for compliance tracking
+5. Run monitoring queries to track pipeline health
+
+### Monitoring & Troubleshooting
+- View pipeline health: Query `{catalog}.{audit_schema}.pipeline_runs`
+- Monitor DQ: Query `{catalog}.{audit_schema}.dq_results`
+- Track alerts: Query `{catalog}.{audit_schema}.alerts`
+- Pre-built queries: `sql/monitoring/monitoring_queries.sql`
+
+See `docs/runbook.md` for operational procedures.
 - Code is written as reusable Python modules and can be imported in Databricks notebooks/jobs.
-- Add new IKEA products/entities by metadata only for standard ingestion patterns.
+- Add new products/entities by metadata only for standard ingestion patterns.
 - Use custom hooks only for exceptional source-specific processing.
+- Multi-product, multi-entity support: All control via metadata in CSV or Databricks tables.
 
 ## Troubleshooting & Common Issues
 

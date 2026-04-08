@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Column Mapping Configuration",
+  "description": "Maps landing layer columns to conformance layer with data type conversions",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "product_name",
+      "source_system",
+      "source_entity",
+      "landing_column",
+      "conformance_column",
+      "conformance_datatype"
+    ],
+    "properties": {
+      "product_name": {
+        "type": "string"
+      },
+      "source_system": {
+        "type": "string"
+      },
+      "source_entity": {
+        "type": "string"
+      },
+      "landing_column": {
+        "type": "string",
+        "description": "Column name in landing table"
+      },
+      "conformance_column": {
+        "type": "string",
+        "description": "Target column name in conformance table"
+      },
+      "conformance_datatype": {
+        "type": "string",
+        "enum": ["string", "int", "bigint", "float", "double", "decimal", "boolean", "date", "timestamp"],
+        "description": "Target data type"
+      },
+      "nullable": {
+        "type": "string",
+        "enum": ["true", "false", "True", "False"],
+        "description": "Whether column can be null"
+      },
+      "default_value": {
+        "type": "string",
+        "description": "Default value if source is null"
+      },
+      "transformation_sql": {
+        "type": "string",
+        "description": "Optional SQL expression for computed/derived columns"
+      },
+      "column_order": {
+        "type": "string",
+        "description": "Numeric position in conformance table"
+      }
+    }
+  }
+}

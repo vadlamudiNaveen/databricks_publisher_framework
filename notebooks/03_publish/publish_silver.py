@@ -20,10 +20,24 @@ def _validate_identifier(value: str, field_name: str) -> str:
     return value
 
 
-def publish_append(df, silver_table: str, partition_columns: list[str] | None = None):
+def publish_append(
+    df,
+    silver_table: str,
+    partition_columns: list[str] | None = None,
+    table_type: str = "managed",
+    external_path: str | None = None,
+):
+    resolved_table_type = str(table_type).strip().lower() if table_type else "managed"
+    if resolved_table_type not in {"managed", "external"}:
+        raise ValueError("table_type must be 'managed' or 'external'")
+    if resolved_table_type == "external" and not str(external_path or "").strip():
+        raise ValueError("external_path is required when table_type=external")
+
     writer = df.write.mode("append").format("delta").option("mergeSchema", "true")
     if partition_columns:
         writer = writer.partitionBy(*partition_columns)
+    if resolved_table_type == "external" and external_path:
+        writer = writer.option("path", external_path)
     writer.saveAsTable(silver_table)
 
 

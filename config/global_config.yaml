@@ -1,13 +1,13 @@
 organization:
-  client_name: IKEA
-  framework_name: ikea-metadata-ingestion-framework
-  environment: ${IKEA_ENV:dev}
+  client_name: YOUR_ORGANIZATION
+  framework_name: metadata-ingestion-framework
+  environment: ${ENVIRONMENT:dev}
   environment_default: dev
   environment_allowed:
     - dev
     - qa
     - prod
-  tenant: ${IKEA_TENANT}
+  tenant: ${TENANT_NAME}
 
 execution:
   default_mode: dry_run
@@ -40,6 +40,15 @@ databricks:
   audit_schema: ${UC_AUDIT_SCHEMA}
   checkpoint_root: ${CHECKPOINT_ROOT}
   schema_tracking_root: ${SCHEMA_TRACKING_ROOT}
+
+external_locations:
+  env_roots:
+    dev: ${DROPZONE_DEV_ROOT:abfss://connect@stcbrpubdzeng511dev.dfs.core.windows.net/}
+    tst: ${DROPZONE_TST_ROOT:abfss://connect@stcbrpubdzeng511tst.dfs.core.windows.net/}
+    prd: ${DROPZONE_PRD_ROOT:abfss://connect@stcbrpubdzeng511prd.dfs.core.windows.net/}
+  containers:
+    - connect
+    - pace
 
 metadata:
   mode: csv

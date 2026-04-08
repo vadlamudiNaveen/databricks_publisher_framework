@@ -1,0 +1,117 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Source Registry Configuration",
+  "description": "Metadata for data source ingestion configuration",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "product_name",
+      "source_system",
+      "source_entity",
+      "source_type",
+      "landing_table",
+      "load_type",
+      "active"
+    ],
+    "properties": {
+      "product_name": {
+        "type": "string",
+        "description": "Logical product/domain grouping"
+      },
+      "source_system": {
+        "type": "string",
+        "description": "Name of source system"
+      },
+      "source_entity": {
+        "type": "string",
+        "description": "Entity name within source system"
+      },
+      "source_type": {
+        "type": "string",
+        "enum": ["FILE", "JDBC", "API", "CUSTOM"],
+        "description": "Ingestion adapter type"
+      },
+      "connection_profile": {
+        "type": "string",
+        "description": "Reference to connection profile in global_config (for JDBC/API)"
+      },
+      "landing_table": {
+        "type": "string",
+        "description": "Fully qualified Databricks table name for landing layer"
+      },
+      "conformance_table": {
+        "type": "string",
+        "description": "Fully qualified Databricks table name for conformance layer"
+      },
+      "silver_table": {
+        "type": "string",
+        "description": "Fully qualified Databricks table name for silver layer"
+      },
+      "load_type": {
+        "type": "string",
+        "enum": ["full", "incremental"],
+        "description": "Full or incremental load strategy"
+      },
+      "active": {
+        "type": "string",
+        "enum": ["true", "false", "True", "False", "1", "0"],
+        "description": "Enable/disable source for orchestration"
+      },
+      "source_options_json": {
+        "type": "string",
+        "description": "JSON-encoded source-specific configuration (see source_options.schema.json)"
+      },
+      "file_path": {
+        "type": "string",
+        "description": "Cloud storage path (for FILE source type)"
+      },
+      "file_format": {
+        "type": "string",
+        "enum": ["csv", "parquet", "json", "jsonl", "binaryFile"],
+        "description": "Input file format"
+      },
+      "dq_enabled": {
+        "type": "string",
+        "enum": ["true", "false", "True", "False", "1", "0"],
+        "description": "Enable data quality checks"
+      },
+      "publish_strategy": {
+        "type": "string",
+        "enum": ["append", "merge"],
+        "description": "Strategy for publishing to silver layer"
+      },
+      "landing_table_type": {
+        "type": "string",
+        "enum": ["managed", "external"],
+        "description": "Storage type for landing table"
+      },
+      "landing_table_path": {
+        "type": "string",
+        "description": "External storage path for landing table when landing_table_type=external"
+      },
+      "conformance_table_type": {
+        "type": "string",
+        "enum": ["managed", "external"],
+        "description": "Storage type for conformance table"
+      },
+      "conformance_table_path": {
+        "type": "string",
+        "description": "External storage path for conformance table when conformance_table_type=external"
+      },
+      "silver_table_type": {
+        "type": "string",
+        "enum": ["managed", "external"],
+        "description": "Storage type for silver table"
+      },
+      "silver_table_path": {
+        "type": "string",
+        "description": "External storage path for silver table when silver_table_type=external"
+      },
+      "merge_keys": {
+        "type": "string",
+        "description": "Comma-separated merge key column names (required for merge strategy)"
+      }
+    }
+  }
+}

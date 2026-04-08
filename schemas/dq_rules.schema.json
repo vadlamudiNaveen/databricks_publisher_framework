@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Data Quality Rules Configuration",
+  "description": "DQ rules for validation at landing and conformance layers",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "product_name",
+      "source_system",
+      "source_entity",
+      "rule_name",
+      "rule_type",
+      "layer"
+    ],
+    "properties": {
+      "product_name": {
+        "type": "string"
+      },
+      "source_system": {
+        "type": "string"
+      },
+      "source_entity": {
+        "type": "string"
+      },
+      "rule_name": {
+        "type": "string",
+        "description": "Unique identifier for the rule"
+      },
+      "rule_type": {
+        "type": "string",
+        "enum": ["required_columns", "expected_columns", "non_nullable", "regex_pattern", "allowed_values", "range", "uniqueness", "freshness", "row_count", "custom_sql"],
+        "description": "Type of quality check"
+      },
+      "layer": {
+        "type": "string",
+        "enum": ["landing", "conformance", "bronze"],
+        "description": "Processing layer where rule is applied"
+      },
+      "column": {
+        "type": "string",
+        "description": "Target column (if applicable)"
+      },
+      "condition": {
+        "type": "string",
+        "description": "Validation condition (SQL expression or rule definition)"
+      },
+      "threshold_percent": {
+        "type": "string",
+        "description": "Percentage of records allowed to fail (0-100)"
+      },
+      "blocking": {
+        "type": "string",
+        "enum": ["true", "false"],
+        "description": "Whether failure blocks downstream processing"
+      },
+      "enabled": {
+        "type": "string",
+        "enum": ["true", "false"],
+        "description": "Enable/disable this rule"
+      }
+    }
+  }
+}

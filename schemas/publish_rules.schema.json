@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Publish Rules Configuration",
+  "description": "Rules for publishing conformance to silver layer",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "product_name",
+      "source_system",
+      "source_entity"
+    ],
+    "properties": {
+      "product_name": {
+        "type": "string"
+      },
+      "source_system": {
+        "type": "string"
+      },
+      "source_entity": {
+        "type": "string"
+      },
+      "publish_strategy": {
+        "type": "string",
+        "enum": ["append", "merge", "replace"],
+        "description": "How to publish to silver"
+      },
+      "merge_keys": {
+        "type": "string",
+        "description": "Comma-separated columns for merge join condition"
+      },
+      "date_column": {
+        "type": "string",
+        "description": "Column used for incremental date filtering"
+      },
+      "partition_columns": {
+        "type": "string",
+        "description": "Comma-separated partition columns"
+      },
+      "optimize_enabled": {
+        "type": "string",
+        "enum": ["true", "false"],
+        "description": "Run OPTIMIZE after publish"
+      },
+      "optimize_z_order_by": {
+        "type": "string",
+        "description": "Columns for Z-order optimization"
+      },
+      "vacuum_enabled": {
+        "type": "string",
+        "enum": ["true", "false"],
+        "description": "Run VACUUM to clean old versions"
+      }
+    }
+  }
+}

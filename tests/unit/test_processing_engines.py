@@ -138,3 +138,30 @@ def test_split_valid_reject_separates_correctly(spark):
     assert valid.count() == 2
     assert reject.count() == 1
     assert reject.collect()[0]["id"] == 2
+
+
+def test_apply_dq_rules_primary_key_not_null(spark):
+    df = spark.createDataFrame([
+        {"id": 1, "amount": 10},
+        {"id": None, "amount": 20},
+    ])
+    result = apply_dq_rules(df, dq_rows=[], primary_key="id")
+    rows = {r["amount"]: r for r in result.collect()}
+    assert rows[10]["dq_status"] == "PASS"
+    assert rows[20]["dq_status"] == "FAIL"
+    assert "primary_key_not_null" in (rows[20]["dq_failed_rule"] or "")
+
+
+def test_apply_dq_rules_primary_key_unique(spark):
+    df = spark.createDataFrame([
+        {"id": 1, "amount": 10},
+        {"id": 1, "amount": 20},
+        {"id": 2, "amount": 30},
+    ])
+    result = apply_dq_rules(df, dq_rows=[], primary_key="id")
+    rows = sorted(result.collect(), key=lambda r: r["amount"])
+    assert rows[0]["dq_status"] == "FAIL"
+    assert rows[1]["dq_status"] == "FAIL"
+    assert rows[2]["dq_status"] == "PASS"
+    assert "primary_key_unique" in (rows[0]["dq_failed_rule"] or "")
+    assert "primary_key_unique" in (rows[1]["dq_failed_rule"] or "")

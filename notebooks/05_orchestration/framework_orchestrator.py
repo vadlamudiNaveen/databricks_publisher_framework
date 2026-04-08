@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import sys
 import time
@@ -62,6 +63,26 @@ def _require_source_fields(source: dict) -> None:
     missing = [k for k in required if not source.get(k)]
     if missing:
         raise ValueError(f"Invalid source config for {source}: missing {missing}")
+
+    for layer in ("landing", "conformance", "silver"):
+        table_type = str(source.get(f"{layer}_table_type", "managed")).strip().lower() or "managed"
+        if table_type not in {"managed", "external"}:
+            raise ValueError(
+                f"Invalid {layer}_table_type={table_type!r} for {source.get('source_system')}.{source.get('source_entity')}. "
+                "Supported values: managed|external"
+            )
+        table_path = str(source.get(f"{layer}_table_path", "")).strip()
+        if table_type == "external" and not table_path:
+            raise ValueError(
+                f"Missing {layer}_table_path for external table in "
+                f"{source.get('source_system')}.{source.get('source_entity')}"
+            )
+
+
+def _layer_table_target(source: dict, layer: str) -> tuple[str, str | None]:
+    table_type = str(source.get(f"{layer}_table_type", "managed")).strip().lower() or "managed"
+    table_path = str(source.get(f"{layer}_table_path", "")).strip() or None
+    return table_type, table_path
 
 
 def _connection_profiles(global_config: dict) -> tuple[dict, dict]:
@@ -187,6 +208,7 @@ def process_source(
     global_config: dict,
     spark=None,
     dry_run: bool = True,
+    pk_check_summary: bool = False,
 ) -> dict:
 
     _require_source_fields(source)
@@ -267,6 +289,13 @@ def process_source(
     )
 
     if dry_run or spark is None:
+        pk_cols = [c.strip() for c in str(source.get("primary_key", "")).split(",") if c.strip()]
+        pk_summary = {
+            "primary_key_configured": bool(pk_cols),
+            "primary_key_columns": pk_cols,
+            "primary_key_checks": ["primary_key_not_null", "primary_key_unique"] if pk_cols else [],
+            "primary_key_failure_counts": None,
+        }
         _log_event(
             "verification_dry_run",
             source=f"{source_system}.{source_entity}",
@@ -275,6 +304,7 @@ def process_source(
                 "mappings_loaded": len(mapping_rows),
                 "dq_rules_loaded": len(dq_rows),
                 "publish_mode_configured": bool(source.get("publish_mode")),
+                **({"pk_summary": pk_summary} if pk_check_summary else {}),
             },
         )
         _append_validation_event(
@@ -299,6 +329,7 @@ def process_source(
                 f"apply {len(dq_rows)} dq rules",
                 f"publish {source['publish_mode']} to {source['silver_table']}",
             ],
+            **({"pk_check_summary": pk_summary} if pk_check_summary else {}),
         }
     fail_fast = bool(_execution_config(global_config).get("fail_fast", True))
     max_retries, backoff_seconds = _retry_policy(global_config, source_type=source_type)
@@ -458,7 +489,15 @@ def process_source(
         elif global_config.get("archive", {}).get("retention_days"):
             retention_days = int(global_config["archive"]["retention_days"])
 
-        write_landing(landing_df, source["landing_table"], archive_table=archive_table, retention_days=retention_days)
+        landing_table_type, landing_table_path = _layer_table_target(source, "landing")
+        write_landing(
+            landing_df,
+            source["landing_table"],
+            table_type=landing_table_type,
+            external_path=landing_table_path,
+            archive_table=archive_table,
+            retention_days=retention_days,
+        )
         stage_seconds["landing"] = round(time.monotonic() - t2, 3)
         required_landing_cols = {"source_system", "source_entity", "load_id", "ingest_ts"}
         landing_has_tech_cols = required_landing_cols.issubset(set(landing_df.columns))
@@ -485,7 +524,13 @@ def process_source(
 
         t3 = time.monotonic()
         conformance_df = apply_column_mappings(bronze_valid_df, mapping_rows)
-        write_conformance(conformance_df, source["conformance_table"])
+        conformance_table_type, conformance_table_path = _layer_table_target(source, "conformance")
+        write_conformance(
+            conformance_df,
+            source["conformance_table"],
+            table_type=conformance_table_type,
+            external_path=conformance_table_path,
+        )
         stage_seconds["conformance"] = round(time.monotonic() - t3, 3)
         expected_conf_cols = [r.get("conformance_column", "") for r in mapping_rows if r.get("conformance_column")]
         missing_conf_cols = [c for c in expected_conf_cols if c not in conformance_df.columns]
@@ -510,8 +555,32 @@ def process_source(
         )
 
         t4 = time.monotonic()
-        dq_df = apply_dq_rules(conformance_df, dq_rows)
+        dq_df = apply_dq_rules(
+            conformance_df,
+            dq_rows,
+            primary_key=source.get("primary_key", ""),
+        )
         valid_df, reject_df = split_valid_reject(dq_df)
+
+        pk_cols = [c.strip() for c in str(source.get("primary_key", "")).split(",") if c.strip()]
+        pk_summary_exec: dict[str, object] = {
+            "primary_key_configured": bool(pk_cols),
+            "primary_key_columns": pk_cols,
+            "primary_key_checks": ["primary_key_not_null", "primary_key_unique"] if pk_cols else [],
+        }
+        if pk_cols:
+            pk_not_null_failures = dq_df.filter(
+                F.col("dq_failed_rule").contains("primary_key_not_null")
+            ).count()
+            pk_unique_failures = dq_df.filter(
+                F.col("dq_failed_rule").contains("primary_key_unique")
+            ).count()
+            pk_summary_exec["primary_key_failure_counts"] = {
+                "primary_key_not_null": pk_not_null_failures,
+                "primary_key_unique": pk_unique_failures,
+            }
+        else:
+            pk_summary_exec["primary_key_failure_counts"] = None
         stage_seconds["dq"] = round(time.monotonic() - t4, 3)
         _log_event(
             "stage_complete",
@@ -528,6 +597,7 @@ def process_source(
             status="PASS" if {"dq_status", "dq_failed_rule"}.issubset(set(dq_df.columns)) else "FAIL",
             seconds=stage_seconds["dq"],
             dq_columns_present={"dq_status", "dq_failed_rule"}.issubset(set(dq_df.columns)),
+            **({"pk_summary": pk_summary_exec} if pk_check_summary else {}),
         )
 
         mode_val = (publish_rule or {}).get("publish_mode", source.get("publish_mode"))
@@ -535,8 +605,15 @@ def process_source(
         partition_columns, zorder_columns = _publish_rule_lists(publish_rule)
         t5 = time.monotonic()
         if mode == "append":
+            silver_table_type, silver_table_path = _layer_table_target(source, "silver")
             _run_with_retry(
-                lambda: publish_append(valid_df, source["silver_table"], partition_columns=partition_columns),
+                lambda: publish_append(
+                    valid_df,
+                    source["silver_table"],
+                    partition_columns=partition_columns,
+                    table_type=silver_table_type,
+                    external_path=silver_table_path,
+                ),
                 max_retries=max_retries,
                 backoff_seconds=backoff_seconds,
                 stage_name=f"publish_append:{source_system}.{source_entity}",
@@ -682,6 +759,7 @@ def process_source(
             "reject_rows": reject_count,
             "publish_mode": mode,
             "stage_seconds": stage_seconds,
+            **({"pk_check_summary": pk_summary_exec} if pk_check_summary else {}),
         }
     except Exception as exc:
         # Log failure event
@@ -749,6 +827,8 @@ def run_all(
     product_name: str | None = None,
     source_system: str | None = None,
     source_entity: str | None = None,
+    parallel_workers: int = 0,
+    pk_check_summary: bool = False,
 ) -> list[dict]:
     sources = active_sources(
         config_dir,
@@ -759,37 +839,92 @@ def run_all(
         source_entity=source_entity,
     )
 
+    if not sources:
+        all_active = active_sources(
+            config_dir,
+            spark=spark,
+            global_config=global_config,
+            product_name=None,
+            source_system=None,
+            source_entity=None,
+        )
+        available = sorted(
+            {
+                (
+                    str(s.get("product_name", "")).strip(),
+                    str(s.get("source_system", "")).strip(),
+                    str(s.get("source_entity", "")).strip(),
+                )
+                for s in all_active
+            }
+        )
+        _logger.warning(
+            "No active sources matched filters product_name=%r source_system=%r source_entity=%r. Available (product, system, entity): %s",
+            product_name,
+            source_system,
+            source_entity,
+            available,
+        )
+        return []
+
+    if parallel_workers <= 1:
+        results = []
+        for source in sources:
+            results.append(
+                process_source(
+                    config_dir=config_dir,
+                    source=source,
+                    global_config=global_config,
+                    spark=spark,
+                    dry_run=dry_run,
+                    pk_check_summary=pk_check_summary,
+                )
+            )
+        return results
+
+    _logger.info("Running %s sources in parallel with %s workers", len(sources), parallel_workers)
     results = []
-    for source in sources:
-        # Only process sources with source_type == 'FILE' for now
-        if str(source.get('source_type', '')).strip().upper() != 'FILE':
-            _logger.info(f"Skipping source {source.get('source_system','')}.{source.get('source_entity','')} with source_type {source.get('source_type')}")
-            continue
-        results.append(
-            process_source(
+    with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
+        future_to_source = {
+            executor.submit(
+                process_source,
                 config_dir=config_dir,
                 source=source,
                 global_config=global_config,
                 spark=spark,
                 dry_run=dry_run,
-            )
-        )
+                pk_check_summary=pk_check_summary,
+            ): source
+            for source in sources
+        }
+        for future in as_completed(future_to_source):
+            source = future_to_source[future]
+            source_name = f"{source.get('source_system', '')}.{source.get('source_entity', '')}"
+            try:
+                results.append(future.result())
+            except Exception as exc:
+                _logger.exception("Parallel execution failed for %s: %s", source_name, exc)
+                raise
     return results
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run metadata-driven IKEA ingestion orchestrator")
+    parser = argparse.ArgumentParser(description="Run metadata-driven data ingestion orchestrator")
     parser.add_argument("--config-dir", default=str(Path(__file__).resolve().parents[2] / "config"))
     parser.add_argument("--global-config", default=str(Path(__file__).resolve().parents[2] / "config" / "global_config.yaml"))
     parser.add_argument("--execute", action="store_true", help="Execute with Spark (Databricks runtime)")
+    parser.add_argument("--parallel", type=int, default=0, help="Run with N parallel workers (default 0 = sequential)")
+    parser.add_argument("--serial", action="store_true", help="Force sequential processing")
+    parser.add_argument("--pk-check-summary", action="store_true", help="Include primary key DQ summary in output")
     parser.add_argument("--product-name", default=None, help="Optional product filter")
     parser.add_argument("--source-system", default=None, help="Optional source system filter")
     parser.add_argument("--source-entity", default=None, help="Optional source entity filter")
     args = parser.parse_args()
 
     global_config = load_global_config(args.global_config)
-    print("[DEBUG] Loaded global_config:", global_config)
     dry_run = not args.execute
+    requested_parallel = max(0, int(args.parallel or 0))
+    parallel_workers = 0 if args.serial else (requested_parallel if requested_parallel > 1 else 0)
 
     results = run_all(
         config_dir=args.config_dir,
@@ -799,7 +934,14 @@ def main() -> None:
         product_name=args.product_name,
         source_system=args.source_system,
         source_entity=args.source_entity,
+        parallel_workers=parallel_workers,
+        pk_check_summary=args.pk_check_summary,
     )
+
+    if not results:
+        _logger.warning(
+            "Orchestrator returned no results. This usually means filter values do not match active metadata rows in config/source_registry.csv."
+        )
     print(json.dumps(results, indent=2))
 
 

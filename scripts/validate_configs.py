@@ -73,12 +73,24 @@ def validate_csv_headers(config_dir: Path) -> list[str]:
                 if file_name == "source_registry.csv":
                     if row.get("is_active", "").lower() not in {"true", "false"}:
                         errors.append(f"{file_name}:{index}: is_active must be true|false")
-                    if row.get("source_type", "").upper() not in {"FILE", "JDBC", "API"}:
-                        errors.append(f"{file_name}:{index}: source_type must be FILE|JDBC|API")
+                    if row.get("source_type", "").upper() not in {"FILE", "JDBC", "API", "CUSTOM"}:
+                        errors.append(f"{file_name}:{index}: source_type must be FILE|JDBC|API|CUSTOM")
                     if row.get("load_type", "").lower() not in {"full", "incremental"}:
                         errors.append(f"{file_name}:{index}: load_type must be full|incremental")
                     if row.get("publish_mode", "").lower() not in {"append", "merge"}:
                         errors.append(f"{file_name}:{index}: publish_mode must be append|merge")
+
+                    for layer in ["landing", "conformance", "silver"]:
+                        table_type = row.get(f"{layer}_table_type", "managed").strip().lower() or "managed"
+                        if table_type not in {"managed", "external"}:
+                            errors.append(
+                                f"{file_name}:{index}: {layer}_table_type must be managed|external"
+                            )
+                        table_path = row.get(f"{layer}_table_path", "").strip()
+                        if table_type == "external" and not table_path:
+                            errors.append(
+                                f"{file_name}:{index}: {layer}_table_path is required when {layer}_table_type=external"
+                            )
                     if row.get("source_type", "").upper() == "FILE" and not row.get("source_path", "").strip():
                         errors.append(f"{file_name}:{index}: source_path is required for FILE sources")
                     if row.get("source_type", "").upper() == "JDBC" and not row.get("jdbc_table", "").strip():

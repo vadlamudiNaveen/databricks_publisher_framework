@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Source Options (JSON-encoded)",
+  "description": "Source-specific configuration options stored as JSON in source_options_json column",
+  "type": "object",
+  "properties": {
+    "incremental_start_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Starting point for incremental loads (ISO 8601 format)"
+    },
+    "incremental_start_value": {
+      "type": "string",
+      "description": "Starting watermark value for increment loads (e.g., database ID)"
+    },
+    "watermark_column": {
+      "type": "string",
+      "description": "Column name used for watermark tracking"
+    },
+    "bronze_dq": {
+      "type": "object",
+      "description": "Bronze layer DQ configuration",
+      "properties": {
+        "required_columns": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Columns that must be present"
+        },
+        "non_nullable_columns": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Columns that cannot be null"
+        },
+        "expected_types": {
+          "type": "object",
+          "description": "Expected data types per column"
+        },
+        "allowed_values": {
+          "type": "object",
+          "description": "Allowed values for specific columns"
+        }
+      }
+    },
+    "pagination": {
+      "type": "object",
+      "description": "API pagination configuration",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["cursor", "offset", "page"]
+        },
+        "page_size": {
+          "type": "integer"
+        },
+        "cursor_param": {
+          "type": "string"
+        }
+      }
+    },
+    "retry_policy": {
+      "type": "object",
+      "description": "Retry configuration overrides",
+      "properties": {
+        "max_retries": {
+          "type": "integer"
+        },
+        "backoff_seconds": {
+          "type": "integer"
+        }
+      }
+    },
+    "jdbc_options": {
+      "type": "object",
+      "description": "JDBC-specific options",
+      "properties": {
+        "fetchsize": {
+          "type": "integer"
+        },
+        "sessionInitStatement": {
+          "type": "string"
+        }
+      }
+    },
+    "archive_mode": {
+      "type": "string",
+      "enum": ["none", "backup", "separate_table"],
+      "description": "How to archive old data"
+    },
+    "archive_table": {
+      "type": "string",
+      "description": "Table for archiving old records (if archive_mode not 'none')"
+    }
+  },
+  "additionalProperties": true
+}
