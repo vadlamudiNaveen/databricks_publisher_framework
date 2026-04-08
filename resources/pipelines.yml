@@ -1,0 +1,47 @@
+resources:
+  pipelines:
+    metadata_driven_ingestion_pipeline:
+      name: metadata_driven_ingestion_pipeline_${bundle.target}
+      catalog: ${var.uc_catalog}
+      target: ${var.uc_silver_schema}
+      channel: CURRENT
+      continuous: false
+      development: true
+      photon: true
+      libraries:
+        - notebook:
+            path: ${workspace.file_path}/notebooks/00_common/global_config
+        - notebook:
+            path: ${workspace.file_path}/notebooks/00_common/databricks_launchpad_widgets
+        - notebook:
+            path: ${workspace.file_path}/notebooks/01_ingestion/ingest_file_autoloader
+        - notebook:
+            path: ${workspace.file_path}/notebooks/01_ingestion/ingest_file_batch
+        - notebook:
+            path: ${workspace.file_path}/notebooks/01_ingestion/ingest_jdbc
+        - notebook:
+            path: ${workspace.file_path}/notebooks/01_ingestion/ingest_api
+        - notebook:
+            path: ${workspace.file_path}/notebooks/02_processing/landing_engine
+        - notebook:
+            path: ${workspace.file_path}/notebooks/02_processing/conformance_engine
+        - notebook:
+            path: ${workspace.file_path}/notebooks/02_processing/dq_engine
+        - notebook:
+            path: ${workspace.file_path}/notebooks/03_publish/publish_silver
+        - notebook:
+            path: ${workspace.file_path}/notebooks/04_audit/audit_logger
+        - notebook:
+            path: ${workspace.file_path}/notebooks/05_orchestration/framework_orchestrator
+      configuration:
+        control.source_registry: ${var.uc_catalog}.${var.uc_control_schema}.source_registry
+        control.column_mapping: ${var.uc_catalog}.${var.uc_control_schema}.column_mapping
+        control.dq_rules: ${var.uc_catalog}.${var.uc_control_schema}.dq_rules
+        control.publish_rules: ${var.uc_catalog}.${var.uc_control_schema}.publish_rules
+
+targets:
+  prod:
+    resources:
+      pipelines:
+        metadata_driven_ingestion_pipeline:
+          development: false

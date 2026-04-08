@@ -18,9 +18,8 @@ def _partition_code_into_sections(code_lines: list[str]) -> list[dict]:
     """
     sections = []
     current_section = []
-    current_type = "imports"
     import_section_ended = False
-    function_count = 0
+    decorator_buffer: list[str] = []
 
     for i, line in enumerate(code_lines):
         # Skip empty lines at the start
@@ -46,8 +45,32 @@ def _partition_code_into_sections(code_lines: list[str]) -> list[dict]:
                 current_section = []
             import_section_ended = True
 
-        # Detect function/class definitions
-        if (line.strip().startswith("def ") or line.strip().startswith("class ")) and import_section_ended:
+        # Collect top-level decorators so they can be attached to the following
+        # top-level def/class in the same cell.
+        is_top_level_decorator = (
+            line == line.lstrip() and line.lstrip().startswith("@")
+        )
+        if import_section_ended and is_top_level_decorator:
+            if current_section and any(l.strip() for l in current_section):
+                desc = _infer_section_description(current_section)
+                sections.append({
+                    "type": "code",
+                    "description": desc,
+                    "content": current_section,
+                })
+                current_section = []
+            decorator_buffer.append(line)
+            continue
+
+        # Detect top-level function/class definitions only.
+        # Nested defs/classes must stay with their parent block, otherwise
+        # notebook cells can become syntactically invalid (e.g., return outside function).
+        is_top_level_def_or_class = (
+            (line.startswith("def ") or line.startswith("class "))
+            and line == line.lstrip()
+        )
+
+        if is_top_level_def_or_class and import_section_ended:
             if current_section and any(l.strip() for l in current_section):
                 # Save current section before function
                 desc = _infer_section_description(current_section)
@@ -57,12 +80,22 @@ def _partition_code_into_sections(code_lines: list[str]) -> list[dict]:
                     "content": current_section,
                 })
                 current_section = []
+            if decorator_buffer:
+                current_section.extend(decorator_buffer)
+                decorator_buffer = []
             current_section.append(line)
-            function_count += 1
         else:
+            if decorator_buffer:
+                # Decorators without a following top-level def/class are treated
+                # as normal lines in the current section.
+                current_section.extend(decorator_buffer)
+                decorator_buffer = []
             current_section.append(line)
 
     # Save final section
+    if decorator_buffer:
+        current_section.extend(decorator_buffer)
+
     if current_section and any(line.strip() for line in current_section):
         if import_section_ended:
             desc = _infer_section_description(current_section)

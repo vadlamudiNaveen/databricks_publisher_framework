@@ -1,0 +1,83 @@
+bundle:
+  name: databricks-ingestion-framework
+
+include:
+  - resources/*.yml
+
+sync:
+  include:
+    - notebooks/**
+    - config/**
+    - pipelines/**
+    - sql/**
+    - docs/**
+
+variables:
+  databricks_host:
+    description: Databricks workspace host, for example https://adb-1234567890123456.7.azuredatabricks.net
+
+  run_as_service_principal:
+    description: Optional service principal application ID used to run jobs (leave empty for current user)
+    default: ""
+
+  uc_catalog:
+    description: Unity Catalog catalog used by framework tables
+    default: main
+
+  uc_bronze_schema:
+    description: Bronze schema name
+    default: bronze
+
+  uc_silver_schema:
+    description: Silver schema name
+    default: silver
+
+  uc_audit_schema:
+    description: Audit schema name
+    default: audit
+
+  uc_control_schema:
+    description: Control schema name
+    default: control
+
+  global_config_path:
+    description: Workspace path to global_config.yaml after bundle sync
+    default: ${workspace.file_path}/config/global_config.yaml
+
+  config_dir_path:
+    description: Workspace path to config directory after bundle sync
+    default: ${workspace.file_path}/config
+
+  spark_version:
+    description: Runtime version for job clusters
+    default: 14.3.x-scala2.12
+
+  node_type_id:
+    description: Worker node type for job clusters
+    default: Standard_DS3_v2
+
+  min_workers:
+    description: Minimum workers for autoscaling jobs
+    default: 1
+
+  max_workers:
+    description: Maximum workers for autoscaling jobs
+    default: 2
+
+targets:
+  dev:
+    default: true
+    workspace:
+      host: ${var.databricks_host}
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      min_workers: 1
+      max_workers: 2
+
+  prod:
+    workspace:
+      host: ${var.databricks_host}
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      min_workers: 2
+      max_workers: 8

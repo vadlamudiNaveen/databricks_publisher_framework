@@ -40,6 +40,22 @@ This framework provides reusable engines for different data types (files, databa
 2. Import notebooks from `notebooks_ipynb/`
 3. Run the setup wizard notebook (creates everything automatically)
 
+### Databricks Asset Bundles (Infrastructure as Code)
+This repository includes a full Databricks Asset Bundles setup:
+- `databricks.yml`
+- `resources/jobs.yml`
+- `resources/pipelines.yml`
+
+Bundle quick commands:
+
+```bash
+databricks bundle validate -t dev --var="databricks_host=<https://your-workspace-host>"
+databricks bundle deploy -t dev --var="databricks_host=<https://your-workspace-host>"
+databricks bundle run -t dev framework_initialize_infrastructure_once --var="databricks_host=<https://your-workspace-host>"
+databricks bundle run -t dev framework_setup_wizard_once --var="databricks_host=<https://your-workspace-host>"
+databricks bundle run -t dev framework_orchestrator_runtime --var="databricks_host=<https://your-workspace-host>"
+```
+
 ### Orchestration Files In `notebooks/05_orchestration`
 - `framework_orchestrator.py`: recurring runtime execution (ingest -> landing -> conformance -> DQ -> silver)
 - `initialize_framework.py`: one-time idempotent Unity Catalog and table provisioning

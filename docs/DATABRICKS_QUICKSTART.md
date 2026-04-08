@@ -2,6 +2,33 @@
 
 This is the fastest path to get the framework running in Databricks with automated setup.
 
+## 0. Databricks Asset Bundles (Recommended)
+
+This repository now includes Databricks Asset Bundles files:
+- `databricks.yml`
+- `resources/jobs.yml`
+- `resources/pipelines.yml`
+
+Use bundle commands from the repository root:
+
+```bash
+databricks bundle validate -t dev --var="databricks_host=<https://your-workspace-host>"
+databricks bundle deploy -t dev --var="databricks_host=<https://your-workspace-host>"
+```
+
+Run one-time setup jobs:
+
+```bash
+databricks bundle run -t dev framework_initialize_infrastructure_once --var="databricks_host=<https://your-workspace-host>"
+databricks bundle run -t dev framework_setup_wizard_once --var="databricks_host=<https://your-workspace-host>"
+```
+
+Run recurring orchestrator job:
+
+```bash
+databricks bundle run -t dev framework_orchestrator_runtime --var="databricks_host=<https://your-workspace-host>"
+```
+
 ## 1. Update Configuration
 
 Edit these files:
