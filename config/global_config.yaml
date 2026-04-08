@@ -102,4 +102,4 @@ audit:
   validation_events_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.validation_events
   rejects_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.rejects
 
-lifecycle_log_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.entity_lifecycle_log
+lifecycle_log_table: ${UC_CATALOG:eng511_development_bronze}.${UC_AUDIT_SCHEMA:audit}.entity_lifecycle_log
