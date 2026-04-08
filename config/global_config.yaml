@@ -101,3 +101,5 @@ audit:
   bronze_dq_results_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.bronze_dq_results
   validation_events_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.validation_events
   rejects_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.rejects
+
+lifecycle_log_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.entity_lifecycle_log
