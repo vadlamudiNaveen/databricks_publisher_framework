@@ -33,13 +33,21 @@ This framework provides reusable engines for different data types (files, databa
 - `docs/`: architecture, onboarding, runbook
 
 ## Quick Start
-1. Create schemas, control tables, and audit tables using scripts in `sql/ddl/`.
-2. Set environment values from `config/.env.example`.
-3. Update `config/global_config.yaml` for your environment and metadata mode (`csv` or `table`).
-4. Load CSVs from `config/` into control tables if using table mode.
-5. Configure pipeline behavior in `pipelines/lakeflow_pipeline.json`.
-6. Execute dry-run orchestration: `python notebooks/05_orchestration/framework_orchestrator.py`.
-7. In Databricks runtime, run with Spark enabled: `python notebooks/05_orchestration/framework_orchestrator.py --execute`.
+
+### For Databricks Users (Recommended)
+👉 **Follow [Databricks Quick Start Guide](docs/DATABRICKS_QUICKSTART.md)** - Fully automated setup wizard with just 3 steps:
+1. Update `config/global_config.yaml` with your workspace details
+2. Import notebooks from `notebooks_ipynb/`
+3. Run the setup wizard notebook (creates everything automatically)
+
+### For Local Development (Without Spark)
+1. Set environment values from `config/.env.example`.
+2. Update `config/global_config.yaml` for your environment.
+3. Run dry-run orchestration: `python notebooks/05_orchestration/framework_orchestrator.py`.
+4. (Local execution validates config/metadata - real data loading requires Databricks)
+
+### For Manual Databricks Setup (Advanced)
+See [Full Databricks Setup Guide](docs/DATABRICKS_SETUP_FULL.md) for detailed manual SQL steps.
 
 ## Copy-Paste Commands
 
