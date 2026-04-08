@@ -54,13 +54,13 @@ external_locations:
     - pace
 
 metadata:
-  mode: csv
+  mode: table
   csv_root: config
   tables:
-    source_registry: ${UC_CATALOG}.${UC_CONTROL_SCHEMA}.source_registry
-    column_mapping: ${UC_CATALOG}.${UC_CONTROL_SCHEMA}.column_mapping
-    dq_rules: ${UC_CATALOG}.${UC_CONTROL_SCHEMA}.dq_rules
-    publish_rules: ${UC_CATALOG}.${UC_CONTROL_SCHEMA}.publish_rules
+    source_registry: ${UC_CATALOG:eng511_development_bronze}.${UC_CONTROL_SCHEMA:control}.source_registry
+    column_mapping: ${UC_CATALOG:eng511_development_bronze}.${UC_CONTROL_SCHEMA:control}.column_mapping
+    dq_rules: ${UC_CATALOG:eng511_development_bronze}.${UC_CONTROL_SCHEMA:control}.dq_rules
+    publish_rules: ${UC_CATALOG:eng511_development_bronze}.${UC_CONTROL_SCHEMA:control}.publish_rules
 
 connections:
   jdbc_profiles:
@@ -96,10 +96,10 @@ connections:
     raw_payload_mode: binary_file
 
 audit:
-  pipeline_runs_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.pipeline_runs
-  dq_results_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.dq_rule_results
-  bronze_dq_results_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.bronze_dq_results
-  validation_events_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.validation_events
-  rejects_table: ${UC_CATALOG}.${UC_AUDIT_SCHEMA}.rejects
+  pipeline_runs_table: ${UC_CATALOG:eng511_development_bronze}.${UC_AUDIT_SCHEMA:audit}.pipeline_runs
+  dq_results_table: ${UC_CATALOG:eng511_development_bronze}.${UC_AUDIT_SCHEMA:audit}.dq_rule_results
+  bronze_dq_results_table: ${UC_CATALOG:eng511_development_bronze}.${UC_AUDIT_SCHEMA:audit}.bronze_dq_results
+  validation_events_table: ${UC_CATALOG:eng511_development_bronze}.${UC_AUDIT_SCHEMA:audit}.validation_events
+  rejects_table: ${UC_CATALOG:eng511_development_bronze}.${UC_AUDIT_SCHEMA:audit}.rejects
 
 lifecycle_log_table: ${UC_CATALOG:eng511_development_bronze}.${UC_AUDIT_SCHEMA:audit}.entity_lifecycle_log
