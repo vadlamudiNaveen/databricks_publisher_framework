@@ -34,14 +34,14 @@ ui:
 databricks:
   host: ${DATABRICKS_HOST}
   workspace_id: ${DATABRICKS_WORKSPACE_ID}
-  catalog: ${UC_CATALOG:main}
+  catalog: ${UC_CATALOG:eng511_development_bronze}
   bronze_schema: ${UC_BRONZE_SCHEMA:bronze}
   silver_schema: ${UC_SILVER_SCHEMA:silver}
   audit_schema: ${UC_AUDIT_SCHEMA:audit}
   control_schema: ${UC_CONTROL_SCHEMA:control}
   checkpoint_root: ${CHECKPOINT_ROOT}
   schema_tracking_root: ${SCHEMA_TRACKING_ROOT}
-  external_location: ${UC_EXTERNAL_LOCATION:abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/}
+  external_location: ${UC_EXTERNAL_LOCATION:abfss://rngpub@adlsdnapdevsilver.dfs.core.windows.net/eng511/}
   use_external_location: ${UC_USE_EXTERNAL_LOCATION:true}
 
 external_locations:
@@ -57,12 +57,12 @@ metadata:
   mode: table
   csv_root: config
   export_parquet_copy: true
-  parquet_copy_root: ${CONTROL_PARQUET_COPY_ROOT:abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/control_parquet/}
+  parquet_copy_root: ${CONTROL_PARQUET_COPY_ROOT:abfss://rngpub@adlsdnapdevsilver.dfs.core.windows.net/eng511/control_parquet/}
   tables:
-    source_registry: ${UC_CATALOG:main}.${UC_CONTROL_SCHEMA:control}.source_registry
-    column_mapping: ${UC_CATALOG:main}.${UC_CONTROL_SCHEMA:control}.column_mapping
-    dq_rules: ${UC_CATALOG:main}.${UC_CONTROL_SCHEMA:control}.dq_rules
-    publish_rules: ${UC_CATALOG:main}.${UC_CONTROL_SCHEMA:control}.publish_rules
+    source_registry: ${UC_CATALOG:eng511_development_bronze}.${UC_CONTROL_SCHEMA:control}.source_registry
+    column_mapping: ${UC_CATALOG:eng511_development_bronze}.${UC_CONTROL_SCHEMA:control}.column_mapping
+    dq_rules: ${UC_CATALOG:eng511_development_bronze}.${UC_CONTROL_SCHEMA:control}.dq_rules
+    publish_rules: ${UC_CATALOG:eng511_development_bronze}.${UC_CONTROL_SCHEMA:control}.publish_rules
 
 connections:
   jdbc_profiles:
@@ -98,10 +98,10 @@ connections:
     raw_payload_mode: binary_file
 
 audit:
-  pipeline_runs_table: ${UC_CATALOG:main}.${UC_AUDIT_SCHEMA:audit}.pipeline_runs
-  dq_results_table: ${UC_CATALOG:main}.${UC_AUDIT_SCHEMA:audit}.dq_rule_results
-  bronze_dq_results_table: ${UC_CATALOG:main}.${UC_AUDIT_SCHEMA:audit}.bronze_dq_results
-  validation_events_table: ${UC_CATALOG:main}.${UC_AUDIT_SCHEMA:audit}.validation_events
-  rejects_table: ${UC_CATALOG:main}.${UC_AUDIT_SCHEMA:audit}.rejects
+  pipeline_runs_table: ${UC_CATALOG:eng511_development_bronze}.${UC_AUDIT_SCHEMA:audit}.pipeline_runs
+  dq_results_table: ${UC_CATALOG:eng511_development_bronze}.${UC_AUDIT_SCHEMA:audit}.dq_rule_results
+  bronze_dq_results_table: ${UC_CATALOG:eng511_development_bronze}.${UC_AUDIT_SCHEMA:audit}.bronze_dq_results
+  validation_events_table: ${UC_CATALOG:eng511_development_bronze}.${UC_AUDIT_SCHEMA:audit}.validation_events
+  rejects_table: ${UC_CATALOG:eng511_development_bronze}.${UC_AUDIT_SCHEMA:audit}.rejects
 
-lifecycle_log_table: ${UC_CATALOG:main}.${UC_AUDIT_SCHEMA:audit}.entity_lifecycle_log
+lifecycle_log_table: ${UC_CATALOG:eng511_development_bronze}.${UC_AUDIT_SCHEMA:audit}.entity_lifecycle_log
