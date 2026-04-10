@@ -8,6 +8,7 @@ resources:
           new_cluster:
             spark_version: ${var.spark_version}
             node_type_id: ${var.node_type_id}
+            data_security_mode: SINGLE_USER
             spark_env_vars:
               ENVIRONMENT: ${bundle.target}
               UC_CATALOG: ${var.uc_catalog}
@@ -34,6 +35,7 @@ resources:
           new_cluster:
             spark_version: ${var.spark_version}
             node_type_id: ${var.node_type_id}
+            data_security_mode: SINGLE_USER
             spark_env_vars:
               ENVIRONMENT: ${bundle.target}
               UC_CATALOG: ${var.uc_catalog}
@@ -64,6 +66,7 @@ resources:
           new_cluster:
             spark_version: ${var.spark_version}
             node_type_id: ${var.node_type_id}
+            data_security_mode: SINGLE_USER
             spark_env_vars:
               ENVIRONMENT: ${bundle.target}
               UC_CATALOG: ${var.uc_catalog}
