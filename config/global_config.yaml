@@ -44,6 +44,15 @@ databricks:
   external_location: ${UC_EXTERNAL_LOCATION:abfss://rngpub@adlsdnapdevsilver.dfs.core.windows.net/eng511/}
   use_external_location: ${UC_USE_EXTERNAL_LOCATION:true}
 
+publisher_defaults:
+  publisher_name: ${PUBLISHER_NAME:connect}
+  silver_catalog_name: ${CATALOG_SILVER:eng511_development_silver}
+  silver_db_name: ${SILVER_DB_NAME:standardised}
+  silver_sub_folder: ${SILVER_SUB_FOLDER:standardised}
+  mnt_dropzone: ${MNT_DROPZONE_ROOT:abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/connect}
+  mnt_bronze: ${MNT_BRONZE_ROOT:abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511}
+  mnt_silver: ${MNT_SILVER_ROOT:abfss://rngpub@adlsdnapdevsilver.dfs.core.windows.net/eng511}
+
 external_locations:
   env_roots:
     dev: ${DROPZONE_DEV_ROOT:abfss://connect@stcbrpubdzeng511dev.dfs.core.windows.net/}
