@@ -356,7 +356,7 @@ Ensure paths are accessible from Databricks:
 
 ```
 product_name,source_system,source_entity,source_type,source_path,landing_table,conformance_table,silver_table,is_active
-connect,cemc,countryriskdet,FILE,/mnt/dropzone/connect/cemccountryriskdet,main.bronze.connect_countryriskdet_landing,main.bronze.connect_countryriskdet_conformance,main.silver.connect_countryriskdet,true
+connect,cemc,countryriskdet,FILE,abfss://raw@<storage-account>.dfs.core.windows.net/connect/cemccountryriskdet,main.bronze.connect_countryriskdet_landing,main.bronze.connect_countryriskdet_conformance,main.silver.connect_countryriskdet,true
 ```
 
 ---
@@ -439,7 +439,7 @@ print(json.dumps(results, indent=2))
 # In a Databricks notebook cell
 dbutils.fs.mount(
     source="abfss://dropzone@yourstorage.dfs.core.windows.net/",
-    mount_point="/mnt/dropzone",
+    source_root="abfss://raw@<storage-account>.dfs.core.windows.net/",
     extra_configs={"fs.azure.account.auth.type": "CustomAuth",
                    "fs.azure.account.custom.auth.login.provider.class": "com.databricks.adl.oauth.CustomAdlGen2OAuthProvider"}
 )
@@ -467,7 +467,7 @@ Before running orchestrator for first time:
 - [ ] Landing/conformance/silver target tables created (or auto-created by framework)
 - [ ] JDBC drivers installed (if needed for JDBC sources)
 - [ ] Databricks file paths/mounts accessible
-- [ ] Test data available in source paths (e.g., /mnt/dropzone/...)
+- [ ] Test data available in source paths (e.g., abfss://raw@<storage-account>.dfs.core.windows.net/...)
 - [ ] DQ rules exist in config/dq_rules.csv
 - [ ] Column mappings exist in config/column_mapping.csv
 

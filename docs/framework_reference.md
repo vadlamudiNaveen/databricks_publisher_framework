@@ -126,7 +126,7 @@ The primary control table. One row per source entity.
 | `source_entity` | ✅ | `countryriskdet` | Entity / table name |
 | `source_type` | ✅ | `FILE` / `JDBC` / `API` | Case-insensitive |
 | `source_format` | FILE only | `json_jsonl_mixed` | See format map below |
-| `source_path` | FILE / API | `/mnt/dropzone/connect/...` | Drop zone path |
+| `source_path` | FILE / API | `abfss://raw@<storage-account>.dfs.core.windows.net/connect/...` | Cloud landing path |
 | `jdbc_profile` | JDBC only | `ikea_erp` | Key in `global_config.yaml > connections.jdbc_profiles` |
 | `jdbc_table` | JDBC only | `dbo.orders` | Table or subquery |
 | `api_profile` | API only | `connect_api` | Key in `global_config.yaml > connections.api_profiles` |
@@ -317,8 +317,8 @@ audit:
 | `UC_BRONZE_SCHEMA` | Bronze schema name | `bronze` |
 | `UC_SILVER_SCHEMA` | Silver schema name | `silver` |
 | `UC_AUDIT_SCHEMA` | Audit schema name | `audit` |
-| `CHECKPOINT_ROOT` | Auto Loader checkpoint path | `/mnt/checkpoints` |
-| `SCHEMA_TRACKING_ROOT` | Auto Loader schema inference path | `/mnt/schema_tracking` |
+| `CHECKPOINT_ROOT` | Auto Loader checkpoint path | `abfss://framework@<storage-account>.dfs.core.windows.net/checkpoints` |
+| `SCHEMA_TRACKING_ROOT` | Auto Loader schema inference path | `abfss://framework@<storage-account>.dfs.core.windows.net/schema_tracking` |
 | `DATABRICKS_HOST` | Workspace URL | `https://adb-xxx.azuredatabricks.net` |
 | `IKEA_ERP_JDBC_URL` | JDBC connection string | `jdbc:sqlserver://...` |
 | `IKEA_ERP_JDBC_USER` | JDBC username | — |
@@ -507,7 +507,7 @@ python scripts/validate_configs.py
 
 **Step 2 — Add row to `config/source_registry.csv`**:
 ```
-ikea,ikea,eu,risk,connect,new_system,new_entity,FILE,json,/mnt/dropzone/new_system/new_entity,,,,,,,incremental,file_modification_ts,${UC_CATALOG}.${UC_BRONZE_SCHEMA}.new_system_new_entity_landing,${UC_CATALOG}.${UC_BRONZE_SCHEMA}.new_system_new_entity_conformance,${UC_CATALOG}.${UC_SILVER_SCHEMA}.new_system_new_entity,record_id,append,true,"{""file_ingest_mode"":""batch""}",,,
+ikea,ikea,eu,risk,connect,new_system,new_entity,FILE,json,abfss://raw@<storage-account>.dfs.core.windows.net/new_system/new_entity,,,,,,,incremental,file_modification_ts,${UC_CATALOG}.${UC_BRONZE_SCHEMA}.new_system_new_entity_landing,${UC_CATALOG}.${UC_BRONZE_SCHEMA}.new_system_new_entity_conformance,${UC_CATALOG}.${UC_SILVER_SCHEMA}.new_system_new_entity,record_id,append,true,"{""file_ingest_mode"":""batch""}",,,
 ```
 
 **Step 3 — Add column mappings to `config/column_mapping.csv`**:
@@ -697,7 +697,7 @@ Attach a human-readable description to any layer table:
 -- Landing table
 COMMENT ON TABLE main.bronze.cemc_countryriskdet_landing IS
   'Landing (raw) copy of CEMC Country Risk Detail from drop zone.
-   Source: /mnt/dropzone/connect/cemccountryriskdet | Format: json_jsonl_mixed
+  Source: abfss://raw@<storage-account>.dfs.core.windows.net/connect/cemccountryriskdet | Format: json_jsonl_mixed
    Preserves 1:1 source data — do not modify. Replay downstream from here.';
 
 -- Conformance table

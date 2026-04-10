@@ -41,7 +41,9 @@ def test_load_global_config_empty_file_returns_dict(tmp_path):
     p = tmp_path / "empty.yaml"
     p.write_text("", encoding="utf-8")
     cfg = load_global_config(str(p))
-    assert cfg == {}
+    # Empty YAML file returns config with lifecycle_log_table default
+    assert "lifecycle_log_table" in cfg
+    assert cfg["lifecycle_log_table"] == "audit.entity_lifecycle_log"
 
 
 # ─── require_config_keys ────────────────────────────────────────────────────

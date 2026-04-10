@@ -60,7 +60,7 @@ python scripts/validate_configs.py  # Validates against schemas
 
 **Usage:**
 ```python
-mgr = TransactionManager(checkpoint_root="/mnt/checkpoints", transaction_id="TX001")
+mgr = TransactionManager(checkpoint_root="abfss://framework@<storage-account>.dfs.core.windows.net/checkpoints", transaction_id="TX001")
 txn = mgr.start_transaction(load_id="L001", ...)
 mgr.save_checkpoint("ingestion", 1, {"rows": 1000})
 mgr. mark_transaction_success()

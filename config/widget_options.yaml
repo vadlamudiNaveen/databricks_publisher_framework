@@ -27,7 +27,7 @@ widget_options:
     - /Volumes/cbr_dev
     - /Volumes/cbr_qa
     - /Volumes/cbr_prod
-    - /mnt/aa_inbound
+    - abfss://aa-inbound@<storage-account>.dfs.core.windows.net
 
   paths_config_path:
     - config/path_configs/pia_data_paths.dev.json
@@ -35,12 +35,12 @@ widget_options:
     - config/path_configs/pia_data_paths.prod.json
 
   ikea_dropzone_mounts:
-    - /mnt/dropzone/connect/cemccountryriskdet
-    - /mnt/dropzone/connect/cemcitemmatplantrep
-    - /mnt/dropzone/connect/cemcmssrepreceiver
-    - /mnt/dropzone/connect/cemcmtrlftsdetail
-    - /mnt/dropzone/pia/commondimensionsprd
-    - /mnt/dropzone/pia/itemsummarypublicprd
+    - ${RAW_CONNECT_COUNTRYRISKDET_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/connect/cemccountryriskdet}
+    - ${RAW_CONNECT_ITEMMATPLANTREP_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/connect/cemcitemmatplantrep}
+    - ${RAW_CONNECT_MSSREPRECEIVER_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/connect/cemcmssrepreceiver}
+    - ${RAW_CONNECT_MTRLFTSDETAIL_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/connect/cemcmtrlftsdetail}
+    - ${RAW_PIA_COMMONDIMENSIONSPRD_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/pia/commondimensionsprd}
+    - ${RAW_PIA_ITEMSUMMARYPUBLICPRD_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/pia/itemsummarypublicprd}
     - abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/connect/cemccountryriskdet/deltaload
     - abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/item
     - abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/valuebag

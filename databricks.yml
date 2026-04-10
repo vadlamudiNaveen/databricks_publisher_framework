@@ -50,6 +50,26 @@ variables:
     description: Workspace path to config directory after bundle sync
     default: ${workspace.file_path}/config
 
+  seed_silver_execute:
+    description: Set true to run the optional silver test-data seeding task
+    default: "false"
+
+  seed_silver_source_table:
+    description: Source silver table name for seeding
+    default: connect_countryriskdet
+
+  seed_silver_target_table:
+    description: Target silver test table name for seeded data
+    default: connect_countryriskdet_test_seed
+
+  seed_silver_row_limit:
+    description: Number of rows to copy from source into the test seed table
+    default: "100"
+
+  seed_silver_mode:
+    description: "Seeding mode: overwrite or append"
+    default: overwrite
+
   spark_version:
     description: Runtime version for job clusters
     default: 14.3.x-scala2.12

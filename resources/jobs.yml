@@ -97,3 +97,17 @@ resources:
               silver_schema: ${var.uc_silver_schema}
               audit_schema: ${var.uc_audit_schema}
               control_schema: ${var.uc_control_schema}
+        - task_key: seed_silver_test_data
+          job_cluster_key: framework_runtime_cluster
+          depends_on:
+            - task_key: post_pipeline_verification
+          notebook_task:
+            notebook_path: ${workspace.root_path}/notebooks_ipynb/06_analysis/seed_silver_test_data
+            base_parameters:
+              execute: ${var.seed_silver_execute}
+              catalog: ${var.uc_catalog}
+              silver_schema: ${var.uc_silver_schema}
+              source_table: ${var.seed_silver_source_table}
+              target_table: ${var.seed_silver_target_table}
+              row_limit: ${var.seed_silver_row_limit}
+              mode: ${var.seed_silver_mode}

@@ -15,7 +15,7 @@ def test_validate_csv_headers_detects_invalid_json_and_missing_merge_key(tmp_pat
     cfg = tmp_path
     (cfg / "source_registry.csv").write_text(
         "tenant,brand,product_name,source_system,source_entity,source_type,load_type,landing_table,conformance_table,silver_table,publish_mode,is_active,source_path,source_options_json\n"
-        "ikea,ikea,p1,s1,e1,FILE,incremental,l,c,s,append,true,/mnt/path,not-json\n",
+        "ikea,ikea,p1,s1,e1,FILE,incremental,l,c,s,append,true,abfss://raw@<storage-account>.dfs.core.windows.net/p1/e1,not-json\n",
         encoding="utf-8",
     )
     (cfg / "column_mapping.csv").write_text(

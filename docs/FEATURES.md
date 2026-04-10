@@ -57,7 +57,7 @@ Automatic checkpoint creation at each pipeline stage:
 from transaction_manager import TransactionManager
 
 mgr = TransactionManager(
-    checkpoint_root="/mnt/checkpoints",
+    checkpoint_root="abfss://framework@<storage-account>.dfs.core.windows.net/checkpoints",
     transaction_id="load_20250801_001"
 )
 
@@ -423,7 +423,7 @@ export LOGLEVEL=DEBUG
 python framework_orchestrator.py --execute
 
 # Check transaction checkpoints
-ls -la /mnt/checkpoints/<transaction_id>/
+ls -la /dbfs/Volumes/<catalog>/<schema>/framework/checkpoints/<transaction_id>/
 
 # Query audit tables
 SELECT * FROM audit.pipeline_runs WHERE status='FAILED' ORDER BY run_timestamp DESC;

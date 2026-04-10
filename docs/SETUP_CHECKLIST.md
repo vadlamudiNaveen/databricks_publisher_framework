@@ -87,12 +87,12 @@ Define your data locations:
 
 ```csv
 product_name,source_system,source_entity,source_type,source_path,landing_table,is_active
-connect,cemc,countryriskdet,FILE,/mnt/dropzone/connect/cemccountryriskdet,main.bronze.connect_countryriskdet_landing,true
+connect,cemc,countryriskdet,FILE,abfss://raw@<storage-account>.dfs.core.windows.net/connect/cemccountryriskdet,main.bronze.connect_countryriskdet_landing,true
 ```
 
 | Field | Example | Your Value |
 |-------|---------|-----------|
-| `source_path` | `/mnt/dropzone/connect/cemccountryriskdet` | _________ |
+| `source_path` | `abfss://raw@<storage-account>.dfs.core.windows.net/connect/cemccountryriskdet` | _________ |
 | `landing_table` | `main.bronze.connect_countryriskdet_landing` | _________ |
 | `conformance_table` | `main.bronze.connect_countryriskdet_conformance` | _________ |
 | `silver_table` | `main.silver.connect_countryriskdet` | _________ |

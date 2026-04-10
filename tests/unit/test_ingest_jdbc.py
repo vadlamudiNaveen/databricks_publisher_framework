@@ -10,7 +10,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT / "notebooks" / "01_ingestion"))
 
-from ingest_jdbc import _apply_parallel_read_options, build_jdbc_options
+from ingest_jdbc import JdbcIngestionConfigError, ParallelReadOptions, build_jdbc_options
 
 
 # ─── build_jdbc_options ──────────────────────────────────────────────────────
@@ -55,30 +55,26 @@ def test_build_jdbc_options_raises_when_no_jdbc_table():
         build_jdbc_options(_valid_profile(), {"jdbc_table": ""})
 
 
-# ─── _apply_parallel_read_options ────────────────────────────────────────────
+# ─── ParallelReadOptions.from_extra_options ──────────────────────────────────
 
 
 def test_parallel_read_all_four_keys_wired():
-    options = {"url": "x", "dbtable": "t"}
     extra = {"numPartitions": 8, "partitionColumn": "id", "lowerBound": 1, "upperBound": 1_000_000}
-    result = _apply_parallel_read_options(options, extra)
-    assert result["numPartitions"] == "8"
-    assert result["partitionColumn"] == "id"
-    assert result["lowerBound"] == "1"
-    assert result["upperBound"] == "1000000"
+    result = ParallelReadOptions.from_extra_options(extra)
+    assert result.enabled is True
+    assert result.options["numPartitions"] == "8"
+    assert result.options["partitionColumn"] == "id"
+    assert result.options["lowerBound"] == "1"
+    assert result.options["upperBound"] == "1000000"
 
 
-def test_parallel_read_partial_keys_silently_skipped():
-    """Missing any one of the 4 required partition keys → no partitioning applied."""
-    options = {"url": "x"}
-    # Only 3 of 4 keys present — must NOT partially apply.
+def test_parallel_read_partial_keys_raise_validation_error():
     extra = {"numPartitions": 8, "partitionColumn": "id", "lowerBound": 1}
-    result = _apply_parallel_read_options(options, extra)
-    assert "numPartitions" not in result
-    assert "partitionColumn" not in result
+    with pytest.raises(JdbcIngestionConfigError, match="requires all partition options"):
+        ParallelReadOptions.from_extra_options(extra)
 
 
 def test_parallel_read_no_partition_keys_unchanged():
-    options = {"url": "x", "dbtable": "t"}
-    result = _apply_parallel_read_options(options, {"queryTimeout": "30"})
-    assert "numPartitions" not in result
+    result = ParallelReadOptions.from_extra_options({"queryTimeout": "30"})
+    assert result.enabled is False
+    assert result.options == {}

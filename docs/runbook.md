@@ -25,3 +25,18 @@
 ## Replay Guidance
 - Keep Landing immutable and retained.
 - Reprocess downstream layers from Landing for deterministic replay.
+
+## Optional Silver Seed Task
+- Runtime job includes an optional seed_silver_test_data task that runs after post-pipeline verification.
+- Default behavior is disabled (seed_silver_execute=false) to avoid accidental test writes.
+- Control variables in bundle config or per run:
+- seed_silver_execute
+- seed_silver_source_table
+- seed_silver_target_table
+- seed_silver_row_limit
+- seed_silver_mode
+
+## UC-first Snapshot Export
+- Use notebooks/00_common/uc_export_utils.py for table snapshot exports to cloud URIs.
+- Legacy DBFS mount paths are rejected by design.
+- Supported export formats: delta, parquet, csv, json.
