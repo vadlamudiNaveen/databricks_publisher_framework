@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pyspark.sql.types import StructField, StructType, StringType
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT / "notebooks" / "02_processing"))
@@ -31,17 +32,26 @@ from publish_silver import publish_append, publish_merge_with_target_policy
 @pytest.fixture(scope="module")
 def spark():
     """Create a local Spark session for testing."""
+    if sys.version_info >= (3, 12):
+        pytest.skip("PySpark 3.5.x Spark tests are unsupported on Python 3.12+ in local mode")
     try:
+        try:
+            from delta import configure_spark_with_delta_pip
+        except Exception:
+            pytest.skip("delta-spark not installed — skipping Delta integration tests")
+
         builder: SparkSession.Builder = SparkSession.builder  # type: ignore[misc]
-        return (
+        spark_builder = (
             builder
             .config("spark.master", "local[1]")
             .config("spark.app.name", "test_end_to_end_flow")
             .config("spark.sql.shuffle.partitions", "1")
             .config("spark.ui.enabled", "false")
             .config("spark.sql.warehouse.dir", "/tmp/warehouse")
-            .getOrCreate()
+            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+            .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
         )
+        return configure_spark_with_delta_pip(spark_builder).getOrCreate()
     except Exception:
         pytest.skip("PySpark/Java not available in this environment — skipping E2E tests")
 
@@ -161,14 +171,15 @@ def test_conformance_column_mapping(spark):
 def test_conformance_with_dq_columns_strips_framework_cols(spark):
     """Test conformance ignores framework technical columns (dq_status, etc)."""
     # Create data with DQ columns (from landing+processing)
-    df = spark.createDataFrame([
-        {
-            "src_id": "C001",
-            "src_name": "Alice",
-            "bronze_dq_status": "PASS",
-            "bronze_dq_failed_check": None,
-        },
+    schema = StructType([
+        StructField("src_id", StringType(), True),
+        StructField("src_name", StringType(), True),
+        StructField("bronze_dq_status", StringType(), True),
+        StructField("bronze_dq_failed_check", StringType(), True),
     ])
+    df = spark.createDataFrame([
+        ("C001", "Alice", "PASS", None),
+    ], schema=schema)
 
     mappings = [
         {
@@ -227,7 +238,8 @@ def test_silver_merge_publish(spark, temp_db):
         {"order_id": "O002", "customer_id": "C002", "amount": 200.0, "status": "PENDING"},
     ])
 
-    silver_table = f"{temp_db}.orders_silver_merge"
+    current_catalog = spark.catalog.currentCatalog()
+    silver_table = f"{current_catalog}.{temp_db}.orders_silver_merge"
     initial_df.write.mode("overwrite").format("delta").saveAsTable(silver_table)
 
     # Prepare update data (modify O001, add O003)

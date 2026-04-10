@@ -53,6 +53,20 @@ publisher_defaults:
   mnt_bronze: ${MNT_BRONZE_ROOT:abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511}
   mnt_silver: ${MNT_SILVER_ROOT:abfss://rngpub@adlsdnapdevsilver.dfs.core.windows.net/eng511}
 
+publishers:
+  connect:
+    silver_catalog_name: ${CONNECT_SILVER_CATALOG_NAME:${UC_CATALOG:eng511_development_bronze}}
+    silver_db_name: ${CONNECT_SILVER_DB_NAME:${UC_SILVER_SCHEMA:silver}}
+  pia:
+    silver_catalog_name: ${PIA_SILVER_CATALOG_NAME:${UC_CATALOG:eng511_development_bronze}}
+    silver_db_name: ${PIA_SILVER_DB_NAME:${UC_SILVER_SCHEMA:silver}}
+  mmia:
+    silver_catalog_name: ${MMIA_SILVER_CATALOG_NAME:${UC_CATALOG:eng511_development_bronze}}
+    silver_db_name: ${MMIA_SILVER_DB_NAME:${UC_SILVER_SCHEMA:silver}}
+  bisa1:
+    silver_catalog_name: ${BISA1_SILVER_CATALOG_NAME:${UC_CATALOG:eng511_development_bronze}}
+    silver_db_name: ${BISA1_SILVER_DB_NAME:${UC_SILVER_SCHEMA:silver}}
+
 external_locations:
   env_roots:
     dev: ${DROPZONE_DEV_ROOT:abfss://connect@stcbrpubdzeng511dev.dfs.core.windows.net/}

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import sys
-import warnings
 from pathlib import Path
 
 import pytest
@@ -13,13 +12,16 @@ sys.path.append(str(ROOT / "notebooks" / "02_processing"))
 pyspark = pytest.importorskip("pyspark", reason="PySpark not installed")
 
 from pyspark.sql import SparkSession
+from pyspark.sql.types import StructField, StructType, IntegerType, StringType
 
-from conformance_engine import apply_column_mappings
-from dq_engine import apply_dq_rules, split_valid_reject
+from conformance_engine import apply_column_mappings, ConformanceConfigError
+from dq_engine import apply_dq_rules, split_valid_reject, DQConfigError
 
 
 @pytest.fixture(scope="module")
 def spark():
+    if sys.version_info >= (3, 12):
+        pytest.skip("PySpark 3.5.x Spark tests are unsupported on Python 3.12+ in local mode")
     try:
         # SparkSession.builder is a classproperty; assigning to a typed variable
         # avoids the Pylance attribute-chain resolution error.
@@ -51,7 +53,7 @@ def test_apply_column_mappings_renames_column(spark):
     assert "src_name" not in result.columns
 
 
-def test_apply_column_mappings_empty_mappings_warns_and_strips_framework_cols(spark):
+def test_apply_column_mappings_empty_mappings_warns_and_strips_framework_cols(spark, caplog):
     from pyspark.sql import functions as F
 
     df = (
@@ -61,11 +63,10 @@ def test_apply_column_mappings_empty_mappings_warns_and_strips_framework_cols(sp
         .withColumn("source_system", F.lit("test"))
     )
 
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
+    with caplog.at_level("WARNING"):
         result = apply_column_mappings(df, [])
 
-    assert any("no valid mapping rows found" in str(warning.message).lower() for warning in w)
+    assert any("no active valid mapping rows found" in m.lower() for m in caplog.messages)
     # Framework technical columns must NOT be in the result.
     assert "bronze_dq_status" not in result.columns
     assert "source_system" not in result.columns
@@ -80,9 +81,8 @@ def test_apply_column_mappings_skips_rows_without_expression(spark):
         {"transform_expression": "", "conformance_column": "col_b"},   # invalid — skipped
         {"transform_expression": None, "conformance_column": "col_c"}, # invalid — skipped
     ]
-    result = apply_column_mappings(df, mappings)
-    assert "col_a" in result.columns
-    assert "col_b" not in result.columns
+    with pytest.raises(ConformanceConfigError):
+        apply_column_mappings(df, mappings)
 
 
 # ─── apply_dq_rules / split_valid_reject ────────────────────────────────────
@@ -123,17 +123,21 @@ def test_apply_dq_rules_accumulates_all_failing_rules(spark):
 def test_apply_dq_rules_skips_empty_expression(spark):
     df = spark.createDataFrame([{"id": 1}])
     rules = [{"rule_name": "empty_rule", "rule_expression": ""}]
-    result = apply_dq_rules(df, rules)
-    row = result.collect()[0]
-    assert row["dq_status"] == "PASS"
+    with pytest.raises(DQConfigError):
+        apply_dq_rules(df, rules)
 
 
 def test_split_valid_reject_separates_correctly(spark):
-    df = spark.createDataFrame([
-        {"id": 1, "dq_status": "PASS", "dq_failed_rule": None},
-        {"id": 2, "dq_status": "FAIL", "dq_failed_rule": "rule_x"},
-        {"id": 3, "dq_status": "PASS", "dq_failed_rule": None},
+    schema = StructType([
+        StructField("id", IntegerType(), False),
+        StructField("dq_status", StringType(), True),
+        StructField("dq_failed_rule", StringType(), True),
     ])
+    df = spark.createDataFrame([
+        (1, "PASS", None),
+        (2, "FAIL", "rule_x"),
+        (3, "PASS", None),
+    ], schema=schema)
     valid, reject = split_valid_reject(df)
     assert valid.count() == 2
     assert reject.count() == 1

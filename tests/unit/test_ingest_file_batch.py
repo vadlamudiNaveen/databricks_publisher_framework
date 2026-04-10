@@ -67,20 +67,28 @@ def test_collect_attachment_references_field_missing():
     with pytest.raises(batch.BatchFileIngestionConfigError):
         batch.collect_attachment_references(df, "missing")
 
-@pytest.mark.skip(reason="Requires active PySpark SparkContext - test in Databricks notebook instead")
-def test_collect_attachment_references_success():
+def test_collect_attachment_references_success(monkeypatch):
     df = MagicMock()
     df.columns = ["a"]
+    monkeypatch.setattr(
+        batch.F,
+        "col",
+        MagicMock(return_value=MagicMock(isNotNull=MagicMock(return_value=MagicMock()))),
+    )
     df.select.return_value.where.return_value.distinct.return_value.limit.return_value.collect.return_value = [
         {"a": "file1"}, {"a": "file2"}, {"a": None}
     ]
     refs = batch.collect_attachment_references(df, "a")
     assert refs == ["file1", "file2"]
 
-@pytest.mark.skip(reason="Requires active PySpark SparkContext - test in Databricks notebook instead")
-def test_copy_attachment_references_success():
+def test_copy_attachment_references_success(monkeypatch):
     df = MagicMock()
     df.columns = ["a"]
+    monkeypatch.setattr(
+        batch.F,
+        "col",
+        MagicMock(return_value=MagicMock(isNotNull=MagicMock(return_value=MagicMock()))),
+    )
     df.select.return_value.where.return_value.distinct.return_value.limit.return_value.collect.return_value = [
         {"a": "file1"}, {"a": "file2"}
     ]

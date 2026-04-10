@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import warnings
 
 sys.path.append(str(Path(__file__).resolve().parents[2] / "notebooks" / "00_common"))
 
@@ -30,5 +31,11 @@ def test_active_sources_filters_product(tmp_path):
 
 def test_parse_json_list_handles_array_and_invalid():
     assert parse_json_list('["a", "b"]') == ["a", "b"]
-    assert parse_json_list('{"a":1}') == []
-    assert parse_json_list("not-json") == []
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        assert parse_json_list('{"a":1}') == []
+        assert parse_json_list("not-json") == []
+
+    messages = [str(w.message) for w in caught]
+    assert any("expected a JSON array" in m for m in messages)
+    assert any("invalid JSON" in m for m in messages)
