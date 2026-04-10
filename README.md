@@ -56,6 +56,105 @@ databricks bundle run -t dev framework_setup_wizard_once --var="databricks_host=
 databricks bundle run -t dev framework_orchestrator_runtime --var="databricks_host=<https://your-workspace-host>"
 ```
 
+### Recommended Databricks CLI Run Order (Current Project)
+
+Use this exact order for first-time setup and validation:
+
+```bash
+# 1) Generate notebook artifacts from python modules
+python3 scripts/generate_notebooks_ipynb.py
+
+# 2) Deploy bundle resources and synced files
+databricks bundle deploy -t dev
+
+# 3) Initialize UC catalog/schemas/tables and bootstrap control metadata
+databricks bundle run -t dev framework_initialize_infrastructure_once
+
+# 4) Validate setup
+databricks bundle run -t dev framework_setup_wizard_once
+
+# 5) Run ingestion pipeline
+databricks bundle run -t dev framework_orchestrator_runtime --no-wait
+```
+
+To track a specific run status:
+
+```bash
+databricks jobs get-run <run_id> --output json
+```
+
+### One Command POC Automation (No Manual Steps)
+
+Run everything (generate notebooks, deploy, import notebooks, initialize, setup wizard, start orchestrator):
+
+```bash
+./scripts/run_poc_end_to_end.sh dev 0408-062709-xu0nb836
+```
+
+Notes:
+- Arg 1: target (`dev` by default)
+- Arg 2: cluster id (`0408-062709-xu0nb836` by default)
+- The script runs orchestrator with `--no-wait` at the end.
+
+## Where Raw Data Paths Are Stored And How To Change
+
+Primary location:
+- `config/source_registry.csv` → `source_path` column
+
+This project now supports global path overrides via environment variables in `source_path` values:
+
+- `RAW_CONNECT_ROOT`
+- `RAW_ITEMSUMMARY_ROOT`
+- `RAW_PIA_COMMONDIM_ITEM_ROOT`
+- `RAW_PIA_COMMONDIM_VALUEBAG_ROOT`
+- `RAW_PIA_COMMONDIM_BAS_ROOT`
+
+Example override before run:
+
+```bash
+export RAW_CONNECT_ROOT="abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/connect/"
+export RAW_ITEMSUMMARY_ROOT="abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/itemsummarypublicprd/"
+```
+
+Then run one-command flow:
+
+```bash
+./scripts/run_poc_end_to_end.sh
+```
+
+## Incremental Load Behavior For Connect Root (POC)
+
+For `connect.cemc.countryriskdet`, the active metadata row uses:
+
+- `source_path=${RAW_CONNECT_ROOT:.../raw_data/connect/}`
+- `file_ingest_mode=autoloader`
+- `recursiveFileLookup=true`
+- `pathGlobFilter=*/deltaload/*.json*`
+- `load_type=incremental`
+
+Meaning:
+1. It scans all nested folders under `raw_data/connect/`.
+2. It only includes JSON/JSONL files in `deltaload` subfolders.
+3. Auto Loader checkpoint tracks processed files across runs.
+4. New files in matching folders are picked up incrementally.
+
+For POC cutoff control, set:
+
+```bash
+export POC_INCREMENTAL_START_TS="2026-04-01T00:00:00Z"
+```
+
+This value is wired in source options for controlled incremental testing.
+
+## Are All Files In Folder Processed?
+
+Yes, for rows with `recursiveFileLookup=true`.
+
+For the connect POC row, all files matching this pattern are processed:
+- `.../raw_data/connect/**/deltaload/*.json*`
+
+If you want to narrow it further, adjust `pathGlobFilter` in `config/source_registry.csv`.
+
 ### Orchestration Files In `notebooks/05_orchestration`
 - `framework_orchestrator.py`: recurring runtime execution (ingest -> landing -> conformance -> DQ -> silver)
 - `initialize_framework.py`: one-time idempotent Unity Catalog and table provisioning
@@ -71,6 +170,26 @@ Pipeline usage model:
 2. Update `config/global_config.yaml` for your environment.
 3. Run dry-run orchestration: `python notebooks/05_orchestration/framework_orchestrator.py`.
 4. (Local execution validates config/metadata - real data loading requires Databricks)
+
+### Local CLI (No Databricks Runtime)
+
+These commands are safe on a laptop/CI runner and do not require Spark writes:
+
+```bash
+# create env
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+
+# validate metadata files
+python scripts/validate_configs.py
+
+# dry-run orchestration plan
+python notebooks/05_orchestration/framework_orchestrator.py
+
+# targeted dry-run test
+python notebooks/05_orchestration/framework_orchestrator.py --product-name connect --source-system cemc --source-entity countryriskdet
+```
 
 ### For Manual Databricks Setup (Advanced)
 See [Full Databricks Setup Guide](docs/DATABRICKS_SETUP_FULL.md) for detailed manual SQL steps.
@@ -265,6 +384,55 @@ The Databricks job principal/service principal must have:
 - Recommended pattern:
 	- Landing (raw/bronze): external allowed and often preferred for storage governance.
 	- Conformance/Silver: managed by default unless external is required by policy/integration.
+
+## Control Folder Files: Delta vs Parquet (Important)
+
+Control tables are created as Delta tables at external locations under `.../eng511/control/<table_name>/`.
+
+Delta storage always includes:
+- `_delta_log/00000000000000000000.json` (transaction log)
+- one or more `part-*.snappy.parquet` data files at the table root
+
+If you only see `_delta_log/*.json`, it usually means:
+1. table was created but not populated yet, or
+2. UI is currently focused only on `_delta_log` subfolder.
+
+To verify table data exists, run in Databricks SQL editor:
+
+```sql
+SELECT count(*) FROM eng511_development_bronze.control.source_registry;
+SELECT count(*) FROM eng511_development_bronze.control.column_mapping;
+SELECT count(*) FROM eng511_development_bronze.control.dq_rules;
+SELECT count(*) FROM eng511_development_bronze.control.publish_rules;
+DESCRIBE DETAIL eng511_development_bronze.control.source_registry;
+```
+
+Note: Delta already stores data in Parquet format. The JSON file you saw is expected Delta log metadata.
+
+## Current Raw Data Notes (April 2026)
+
+Current source landscape:
+
+- `abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/connect/`
+	- CRC simple JSON + JSONL (mixed)
+- `abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/`
+	- CRC simple JSON (mixed structured)
+- `abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/itemsummarypublicprd/baseload/`
+	- ODL complex JSON (large copy window)
+- `abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/itemsummarypublicprd/deltaload/`
+	- ODL complex JSON (current-month subset; copy is slow)
+
+Operational note:
+- These paths are not yet refreshed daily (scheduled refresh jobs pending).
+
+STTM/metadata references for CONNECT:
+- `eng511_development_bronze.metadata.source_files_list_vw`
+- `eng511_development_bronze.metadata.sttm_vw`
+
+Recommended low-risk test strategy:
+1. Start with connect + one entity (`cemc.countryriskdet`) using dry-run.
+2. Run execute for that single source before full orchestrator run.
+3. Add heavy ODL sources (`itemsummarypublicprd`) only after spot-checking runtime/cost.
 
 ## External Location Setup
 - External locations must be created by platform/IDNAP (metastore-level admins).

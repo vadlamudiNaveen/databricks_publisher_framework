@@ -56,6 +56,8 @@ external_locations:
 metadata:
   mode: table
   csv_root: config
+  export_parquet_copy: true
+  parquet_copy_root: ${CONTROL_PARQUET_COPY_ROOT:abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/control_parquet/}
   tables:
     source_registry: ${UC_CATALOG:eng511_development_bronze}.${UC_CONTROL_SCHEMA:control}.source_registry
     column_mapping: ${UC_CATALOG:eng511_development_bronze}.${UC_CONTROL_SCHEMA:control}.column_mapping
