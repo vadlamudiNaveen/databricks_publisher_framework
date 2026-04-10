@@ -16,6 +16,7 @@ resources:
               UC_SILVER_SCHEMA: ${var.uc_silver_schema}
               UC_AUDIT_SCHEMA: ${var.uc_audit_schema}
               UC_CONTROL_SCHEMA: ${var.uc_control_schema}
+              METADATA_CSV_ROOT: ${var.config_dir_path}
             autoscale:
               min_workers: ${var.min_workers}
               max_workers: ${var.max_workers}
@@ -43,6 +44,7 @@ resources:
               UC_SILVER_SCHEMA: ${var.uc_silver_schema}
               UC_AUDIT_SCHEMA: ${var.uc_audit_schema}
               UC_CONTROL_SCHEMA: ${var.uc_control_schema}
+              METADATA_CSV_ROOT: ${var.config_dir_path}
             autoscale:
               min_workers: ${var.min_workers}
               max_workers: ${var.max_workers}
@@ -74,6 +76,7 @@ resources:
               UC_SILVER_SCHEMA: ${var.uc_silver_schema}
               UC_AUDIT_SCHEMA: ${var.uc_audit_schema}
               UC_CONTROL_SCHEMA: ${var.uc_control_schema}
+              METADATA_CSV_ROOT: ${var.config_dir_path}
             autoscale:
               min_workers: ${var.min_workers}
               max_workers: ${var.max_workers}
