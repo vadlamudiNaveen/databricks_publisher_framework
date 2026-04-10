@@ -41,11 +41,11 @@ widget_options:
     - ${RAW_CONNECT_MTRLFTSDETAIL_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/connect/cemcmtrlftsdetail}
     - ${RAW_PIA_COMMONDIMENSIONSPRD_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/pia/commondimensionsprd}
     - ${RAW_PIA_ITEMSUMMARYPUBLICPRD_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/pia/itemsummarypublicprd}
-    - abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/connect/cemccountryriskdet/deltaload
-    - abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/item
-    - abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/valuebag
-    - abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/bas
-    - abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/metadata/sttm
+    - ${RAW_CONNECT_COUNTRYRISKDET_DELTA_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/connect/cemccountryriskdet/deltaload}
+    - ${RAW_PIA_COMMONDIM_ITEM_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/pia/commondimensions/item}
+    - ${RAW_PIA_COMMONDIM_VALUEBAG_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/pia/commondimensions/valuebag}
+    - ${RAW_PIA_COMMONDIM_BAS_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/pia/commondimensions/bas}
+    - ${RAW_METADATA_STTM_ROOT:abfss://raw@<storage-account>.dfs.core.windows.net/metadata/sttm}
 
   source_formats:
     - binaryFile

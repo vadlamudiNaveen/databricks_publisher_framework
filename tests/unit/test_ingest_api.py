@@ -126,33 +126,32 @@ def test_resolve_headers_caller_header_not_overwritten(monkeypatch):
 
 def test_extract_records_plain_list():
     payload = [{"id": 1}, {"id": 2}]
-    assert _extract_records(payload, {}) == payload
+    assert _extract_records(payload, envelope_key=None) == payload
 
 
 def test_extract_records_data_envelope():
     payload = {"data": [{"id": 1}], "total": 1}
-    assert _extract_records(payload, {}) == [{"id": 1}]
+    assert _extract_records(payload, envelope_key=None) == [{"id": 1}]
 
 
 def test_extract_records_items_envelope():
     payload = {"items": [{"id": 2}]}
-    assert _extract_records(payload, {}) == [{"id": 2}]
+    assert _extract_records(payload, envelope_key=None) == [{"id": 2}]
 
 
 def test_extract_records_custom_key_override():
     payload = {"content": [{"x": 1}], "data": [{"x": 2}]}
     # "content" key override wins over auto-detect
-    source = {"response_data_key": "content"}
-    assert _extract_records(payload, source) == [{"x": 1}]
+    assert _extract_records(payload, envelope_key="content") == [{"x": 1}]
 
 
 def test_extract_records_scalar_dict_wrapped():
     payload = {"id": 1, "name": "test"}
-    assert _extract_records(payload, {}) == [{"id": 1, "name": "test"}]
+    assert _extract_records(payload, envelope_key=None) == [{"id": 1, "name": "test"}]
 
 
 def test_extract_records_empty_input():
-    assert _extract_records([], {}) == []
+    assert _extract_records([], envelope_key=None) == []
 
 
 # ─── _parse_response_json ────────────────────────────────────────────────────

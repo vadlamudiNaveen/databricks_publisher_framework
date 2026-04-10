@@ -22,6 +22,12 @@ databricks bundle validate -t dev
 databricks bundle deploy -t dev
 ```
 
+For direct CLI job triggers, use positional job ID syntax (Databricks CLI v0.296+):
+
+```bash
+databricks jobs run-now 193010758254845 -o json
+```
+
 Run one-time setup jobs:
 
 ```bash

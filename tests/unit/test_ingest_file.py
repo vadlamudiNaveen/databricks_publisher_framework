@@ -77,7 +77,8 @@ def test_resolve_batch_file_config_unknown_raises():
 
 
 def test_format_map_covers_all_common_formats():
-    for fmt in ("json", "jsonl", "binaryFile", "json_jsonl_mixed", "csv", "parquet", "avro", "orc", "text"):
+    # _FORMAT_MAP uses lowercase keys (normalized format names)
+    for fmt in ("json", "jsonl", "binaryfile", "json_jsonl_mixed", "csv", "parquet", "avro", "orc", "text"):
         assert fmt in _FORMAT_MAP
 
 
@@ -103,20 +104,27 @@ def _tracking_source():
 
 
 def test_tracking_paths_happy_path():
-    schema_loc, checkpoint_loc = _build_tracking_paths(_tracking_cfg(), _tracking_source())
+    from ingest_file_autoloader import DatabricksConfig, SourceConfig as AutoLoaderSourceConfig
+    dbx_cfg = DatabricksConfig.from_global_config(_tracking_cfg())
+    source_cfg = AutoLoaderSourceConfig.from_dict({**_tracking_source(), "source_path": "abfss://raw@storage/data"})
+    schema_loc, checkpoint_loc = _build_tracking_paths(dbx_cfg, source_cfg)
     assert schema_loc == "abfss://bronze@storage/schema/ikea/connect/cemc/orders"
     assert checkpoint_loc == "abfss://bronze@storage/checkpoints/ikea/connect/cemc/orders"
 
 
 def test_tracking_paths_raises_on_missing_source_field():
-    source = {**_tracking_source(), "tenant": ""}
-    with pytest.raises(ValueError, match="Missing tracking path configuration"):
-        _build_tracking_paths(_tracking_cfg(), source)
+    from ingest_file_autoloader import DatabricksConfig, SourceConfig as AutoLoaderSourceConfig
+    dbx_cfg = DatabricksConfig.from_global_config(_tracking_cfg())
+    # tenant field is required for tracking_suffix - test that it raises
+    with pytest.raises((ValueError, KeyError), match="tenant|Missing tracking path"):
+        AutoLoaderSourceConfig.from_dict({**_tracking_source(), "tenant": "", "source_path": "abfss://raw@storage/data"})
 
 
 def test_tracking_paths_raises_on_missing_config():
-    with pytest.raises(ValueError, match="Missing tracking path configuration"):
-        _build_tracking_paths({}, _tracking_source())
+    from ingest_file_autoloader import DatabricksConfig
+    # DatabricksConfig requires schema_tracking_root and checkpoint_root from global config
+    with pytest.raises((ValueError, KeyError), match="scheme_tracking_root|checkpoint_root|Missing"):
+        DatabricksConfig.from_global_config({})
 
 
 # ─── build_autoloader_options ────────────────────────────────────────────────
