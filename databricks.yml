@@ -44,11 +44,11 @@ variables:
 
   global_config_path:
     description: Workspace path to global_config.yaml after bundle sync
-    default: ${workspace.file_path}/config/global_config.yaml
+    default: ${workspace.root_path}/files/config/global_config.yaml
 
   config_dir_path:
     description: Workspace path to config directory after bundle sync
-    default: ${workspace.file_path}/config
+    default: ${workspace.root_path}/files/config
 
   seed_silver_execute:
     description: Set true to run the optional silver test-data seeding task
