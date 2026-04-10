@@ -85,3 +85,15 @@ resources:
               global-config: ${var.global_config_path}
               parallel: "4"
               pk-check-summary: "true"
+        - task_key: post_pipeline_verification
+          job_cluster_key: framework_runtime_cluster
+          depends_on:
+            - task_key: framework_orchestrator_execute
+          notebook_task:
+            notebook_path: ${workspace.root_path}/notebooks_ipynb/06_analysis/post_pipeline_verification_sql
+            base_parameters:
+              catalog: ${var.uc_catalog}
+              bronze_schema: ${var.uc_bronze_schema}
+              silver_schema: ${var.uc_silver_schema}
+              audit_schema: ${var.uc_audit_schema}
+              control_schema: ${var.uc_control_schema}
