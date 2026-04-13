@@ -105,7 +105,7 @@ resources:
           depends_on:
             - task_key: framework_orchestrator_execute
           notebook_task:
-            notebook_path: ${workspace.root_path}/notebooks_ipynb/06_analysis/post_pipeline_verification_sql
+            notebook_path: ${workspace.root_path}/notebooks_ipynb/06_analysis/post_pipeline_verification
             base_parameters:
               catalog: ${var.uc_catalog}
               bronze_schema: ${var.uc_bronze_schema}
