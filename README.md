@@ -434,6 +434,240 @@ Recommended low-risk test strategy:
 2. Run execute for that single source before full orchestrator run.
 3. Add heavy ODL sources (`itemsummarypublicprd`) only after spot-checking runtime/cost.
 
+## ODL JSON Performance Model
+
+ODL JSON files (e.g. `pia/itemsummarypublicprd`) are large, multi-line, deeply nested objects with embedded arrays. Simple flattening is slow for five specific reasons.
+
+### Why Simple Flattening Is Slow
+
+| Root Cause | What Happens |
+|---|---|
+| `multiLine=true` on native json format | One Spark task per file — no intra-file parallelism |
+| Schema inference (`inferSchema`) | Scans the entire dataset **twice** before reading a single row |
+| Full flatten of all struct columns | Reads every nested field even ones never queried downstream |
+| Array explode inline | 1 source row → N×M rows (multiplicative blowup per array) |
+| No predicate pushdown on JSON | Every filter reads the full file byte-for-byte |
+
+### Correct 3-Layer ODL Pipeline Model
+
+```
+Source files (large multiLine ODL JSON)
+         │
+         ▼
+Landing (binaryFile)           one row per FILE, no parsing, no schema cost
+  source_options: {"json_parse_mode": "raw_string"}
+  columns: path, modificationTime, raw_payload (string)
+         │
+         ▼
+Conformance (scalar extraction) get_json_object per column, explicit paths only
+  NO arrays exploded here
+  transform_expression: get_json_object(raw_payload, '$.itemNo')
+         │
+         ├──► Silver root entity   flat, typed scalars — merge on item_no
+         │
+         ├──► Silver array child 1  (e.g. localRetailItems)
+         │      separate source_registry row, explode ONE array
+         │      from_json with EXPLICIT DDL schema (not inference)
+         │
+         └──► Silver array child 2  (e.g. measurements, categoryPaths)
+                separate entity, isolated merge, separate Z-order
+```
+
+**Key rule:** each array becomes its own `source_registry` row and its own silver Delta table. Never explode multiple arrays in one pass.
+
+### How To Configure in Metadata (No Code Changes)
+
+Set in `source_options_json` for any ODL/complex JSON source:
+
+```json
+{
+  "file_ingest_mode": "batch",
+  "recursiveFileLookup": "true",
+  "json_parse_mode": "raw_string"
+}
+```
+
+Then in `column_mapping.csv`, use `get_json_object` as `transform_expression` for every scalar field:
+
+| `transform_expression` | `conformance_column` |
+|---|---|
+| `get_json_object(raw_payload, '$.itemNo')` | `item_no` |
+| `get_json_object(raw_payload, '$.itemType')` | `item_type` |
+| `get_json_object(raw_payload, '$.globalSalesStatus')` | `global_sales_status` |
+| `CAST(get_json_object(raw_payload, '$.quantity') AS DECIMAL(18,3))` | `qty` |
+| `get_json_object(raw_payload, '$.salesStatus.status')` | `sales_status` |
+| `raw_payload` | `raw_payload` ← keep for array child extraction |
+
+For child array entities, use `from_json` with an **explicit** DDL schema in a separate conformance mapping:
+
+```
+explode(from_json(raw_payload,
+  'array<struct<countryCode:string,salesStatus:string,price:decimal(18,3)>>'))
+```
+
+### Explicit Schema vs Inference
+
+To bypass schema inference entirely when using native json format, pass:
+
+```json
+{
+  "odl_schema_ddl": "struct<itemNo:string,itemType:string,globalSalesStatus:string,...>"
+}
+```
+
+Generate the DDL from a single sample record in Databricks SQL:
+```sql
+SELECT schema_of_json(file_content_string_here)
+```
+Run this once on one representative file — not on the full dataset.
+
+### Z-order Recommendations Per ODL Entity
+
+| Silver Table | Z-ORDER BY |
+|---|---|
+| `pia_odl_itemsummary` | `item_no` |
+| `pia_odl_localretailitem` | `item_no, country_code` |
+| `pia_odl_measurement` | `item_no, type` |
+| `pia_odl_categorymain` | `item_no, id` |
+
+### Analysis Notebook
+
+Run `notebooks/06_analysis/odl_json_profiler.py` in Databricks to:
+- Profile file count, sizes, and array cardinalities **without any parsing cost**
+- Benchmark the three approaches (inference vs binaryFile vs selective extract) on your actual data
+- Generate skeleton source_registry and column_mapping entries for your ODL structure
+
+---
+
+## Millions of Small Files (HIP / ODL at Scale)
+
+HIP delivers thousands of small JSON files per day, accumulating to millions of files over time. This is a separate problem from complex JSON structure — and both problems interact.
+
+### The Three Root Causes
+
+**1. Directory listing is O(n)**
+Auto Loader default mode lists the entire ADLS directory on every trigger. With millions of files this takes 10s of minutes of LIST API calls before a single byte of data is read.
+
+**2. Task overhead exceeds data work**
+Each small file becomes one Spark task. 10,000 files of 5 KB each = 10,000 tasks processing 5 KB each. Task scheduling overhead (seconds per task) vastly exceeds actual read time (milliseconds per task).
+
+**3. Landing table file fragmentation**
+Every batch appends many small Parquet files to the Delta landing table. After months of operation: 1M source files → 1M+ small Parquet files. Downstream conformance and query performance degrades badly without regular compaction.
+
+### Solution: Event Grid Notification Mode + Partitioned Landing
+
+```
+HIP delivers 50,000 files/day to ADLS
+         │
+         ▼
+Azure Event Grid subscription         ← O(1) per-file notification, no directory listing
+  filter: Microsoft.Storage.BlobCreated
+  path: /eng511/raw_data/pia/itemsummarypublicprd/
+  endpoint: Azure Event Hub
+         │
+         ▼
+Auto Loader (cloudFiles.useNotifications=true)
+  maxFilesPerTrigger: 50000           ← cap per batch
+  fetchParallelism: 8                 ← parallel metadata workers
+  backfillInterval: 1 day             ← safety net full re-scan
+         │
+         ▼
+Landing Delta table                   ← partitioned by ingest_date
+  binaryFile format, 1 row per file
+  raw_payload STRING column
+  OPTIMIZE after each batch (inline)
+  Z-ORDER BY source_system
+         │
+         ▼
+Conformance + Silver                  ← partition pruning: WHERE ingest_date = '...'
+```
+
+### Full source_options_json for High-Volume ODL Sources
+
+```json
+{
+  "file_ingest_mode": "autoloader",
+  "recursiveFileLookup": "true",
+  "pathGlobFilter": "*.json",
+  "cloudFiles.useNotifications": "true",
+  "cloudFiles.maxFilesPerTrigger": "50000",
+  "cloudFiles.maxBytesPerTrigger": "1g",
+  "cloudFiles.includeExistingFiles": "false",
+  "cloudFiles.backfillInterval": "1 day",
+  "cloudFiles.fetchParallelism": "8",
+  "cloudFiles.schemaEvolutionMode": "rescue",
+  "json_parse_mode": "raw_string",
+  "post_landing_optimize": true,
+  "landing_partition_columns": "ingest_date",
+  "landing_optimize_zorder": "source_system"
+}
+```
+
+Note: `cloudFiles.includeExistingFiles: false` means only new files from the first run onwards are picked up. For initial historical backfill use a separate one-time batch job with an explicit date range filter.
+
+### Expected Performance With This Model
+
+| Problem (without) | With this model |
+|---|---|
+| O(n) file listing: minutes/hours | Event Grid: sub-second O(1) |
+| 1 Spark task per source file | Batched triggers, `maxFilesPerTrigger` cap |
+| Schema inference on every run | `binaryFile` — no schema, fixed columns |
+| 1M+ small Parquet in landing | `post_landing_optimize` compacts after each batch |
+| Partition scan on full table | `WHERE ingest_date = '...'` prunes to one day |
+| OPTIMIZE on full table (slow) | Scoped OPTIMIZE per `ingest_date` partition |
+
+### Daily Compaction SQL (Alternative to Inline OPTIMIZE)
+
+For very high volume (>100K files/day) where inline `post_landing_optimize` adds too much latency, run this as a scheduled job daily at 03:00:
+
+```sql
+-- Compact yesterday's landing partition
+OPTIMIZE eng511_development_bronze.bronze_dev.pia_odl_itemsummary_raw
+  WHERE ingest_date = current_date() - 1
+  ZORDER BY (source_system);
+
+-- Retain 7 days then vacuum
+VACUUM eng511_development_bronze.bronze_dev.pia_odl_itemsummary_raw
+  RETAIN 168 HOURS;
+```
+
+### Azure Event Grid Setup (One-Time, Platform/IDNAP Admins)
+
+Databricks Auto Loader can auto-create Event Grid subscriptions when given permissions, but for this workspace the recommended approach is manual creation by platform admins:
+
+1. Go to Azure Portal → Storage Account `adlsdnapdevbronze` → Events
+2. Create a new event subscription:
+   - **Event types:** `Microsoft.Storage.BlobCreated` only
+   - **Filter subject:** `/eng511/raw_data/pia/itemsummarypublicprd/`
+   - **Endpoint type:** Azure Event Hubs
+   - **Consumer group:** `databricks-autoloader`
+3. Grant Databricks managed identity the role: **Azure Event Hubs Data Receiver**
+4. Pass Event Hub connection details via Databricks Secrets and then into `source_options_json`:
+   ```json
+   {
+     "cloudFiles.connectionString": "{{secrets/scope/eventhub_connection_string}}",
+     "cloudFiles.queueName": "databricks-autoloader"
+   }
+   ```
+
+Verify notification mode is active after first run:
+```sql
+DESCRIBE HISTORY eng511_development_bronze.bronze_dev.pia_odl_itemsummary_raw;
+-- Look for operationParameters.sourceFileNotificationChannelType = "EventHub"
+```
+
+### Check Landing Table File Fragmentation
+
+Run in Databricks SQL to measure current health:
+```sql
+DESCRIBE DETAIL eng511_development_bronze.bronze_dev.pia_odl_itemsummary_raw;
+-- numFiles should be < 1000 after OPTIMIZE; avg file size > 128 MB is healthy
+```
+
+If `numFiles` is very large relative to data size, OPTIMIZE has not run or is not keeping up with ingest rate.
+
+---
+
 ## External Location Setup
 - External locations must be created by platform/IDNAP (metastore-level admins).
 - Use template SQL in:
