@@ -21,8 +21,8 @@ resources:
               min_workers: ${var.min_workers}
               max_workers: ${var.max_workers}
             init_scripts:
-              - dbfs:
-                  destination: dbfs:/databricks_ingestion_framework/init_install_pyyaml.sh
+              - workspace:
+                  destination: ${workspace.root_path}/scripts/init_install_pyyaml.sh
       tasks:
         - task_key: initialize_framework
           job_cluster_key: framework_setup_cluster
@@ -52,8 +52,8 @@ resources:
               min_workers: ${var.min_workers}
               max_workers: ${var.max_workers}
             init_scripts:
-              - dbfs:
-                  destination: dbfs:/databricks_ingestion_framework/init_install_pyyaml.sh
+              - workspace:
+                  destination: ${workspace.root_path}/scripts/init_install_pyyaml.sh
       tasks:
         - task_key: setup_wizard
           job_cluster_key: framework_setup_cluster
@@ -87,8 +87,8 @@ resources:
               min_workers: ${var.min_workers}
               max_workers: ${var.max_workers}
             init_scripts:
-              - dbfs:
-                  destination: dbfs:/databricks_ingestion_framework/init_install_pyyaml.sh
+              - workspace:
+                  destination: ${workspace.root_path}/scripts/init_install_pyyaml.sh
       tasks:
         - task_key: framework_orchestrator_execute
           job_cluster_key: framework_runtime_cluster

@@ -12,6 +12,7 @@ sync:
     - pipelines/**
     - sql/**
     - docs/**
+    - scripts/**
 
 variables:
   databricks_host:
