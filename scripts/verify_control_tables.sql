@@ -24,43 +24,11 @@ SELECT product_name, source_system, source_entity, conformance_column, transform
 FROM eng511_development_bronze.control.column_mapping 
 LIMIT 5;
 
--- 4. Detailed table statistics
-SELECT 
-    name,
-    size_in_bytes,
-    num_files,
-    num_rows,
-    last_modified
-FROM (
-    SELECT 
-        'source_registry' as name,
-        size_in_bytes,
-        num_files,
-        num_rows,
-        last_modified
-    FROM (DESCRIBE DETAIL eng511_development_bronze.control.source_registry)
-    UNION ALL
-    SELECT 
-        'column_mapping' as name,
-        size_in_bytes,
-        num_files,
-        num_rows,
-        last_modified
-    FROM (DESCRIBE DETAIL eng511_development_bronze.control.column_mapping)
-    UNION ALL
-    SELECT 
-        'dq_rules' as name,
-        size_in_bytes,
-        num_files,
-        num_rows,
-        last_modified
-    FROM (DESCRIBE DETAIL eng511_development_bronze.control.dq_rules)
-    UNION ALL
-    SELECT 
-        'publish_rules' as name,
-        size_in_bytes,
-        num_files,
-        num_rows,
-        last_modified
-    FROM (DESCRIBE DETAIL eng511_development_bronze.control.publish_rules)
-);
+-- 4. Detailed table statistics (run each separately in Databricks SQL)
+DESCRIBE DETAIL eng511_development_bronze.control.source_registry;
+
+DESCRIBE DETAIL eng511_development_bronze.control.column_mapping;
+
+DESCRIBE DETAIL eng511_development_bronze.control.dq_rules;
+
+DESCRIBE DETAIL eng511_development_bronze.control.publish_rules;
