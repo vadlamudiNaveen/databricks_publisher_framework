@@ -27,7 +27,7 @@ resources:
             - pypi:
                 package: PyYAML==6.0.2
           notebook_task:
-            notebook_path: ${workspace.root_path}/notebooks_ipynb/05_orchestration/initialize_framework
+            notebook_path: ${workspace.root_path}/files/notebooks_ipynb/05_orchestration/initialize_framework
             base_parameters:
               global-config: ${var.global_config_path}
 
@@ -58,7 +58,7 @@ resources:
             - pypi:
                 package: PyYAML==6.0.2
           notebook_task:
-            notebook_path: ${workspace.root_path}/notebooks_ipynb/05_orchestration/setup_wizard
+            notebook_path: ${workspace.root_path}/files/notebooks_ipynb/05_orchestration/setup_wizard
             base_parameters:
               global-config: ${var.global_config_path}
 
@@ -93,7 +93,7 @@ resources:
             - pypi:
                 package: PyYAML==6.0.2
           notebook_task:
-            notebook_path: ${workspace.root_path}/notebooks_ipynb/05_orchestration/framework_orchestrator
+            notebook_path: ${workspace.root_path}/files/notebooks_ipynb/05_orchestration/framework_orchestrator
             base_parameters:
               execute: "true"
               config-dir: ${var.config_dir_path}
@@ -105,7 +105,7 @@ resources:
           depends_on:
             - task_key: framework_orchestrator_execute
           notebook_task:
-            notebook_path: ${workspace.root_path}/notebooks_ipynb/06_analysis/post_pipeline_verification
+            notebook_path: ${workspace.root_path}/files/notebooks_ipynb/06_analysis/post_pipeline_verification
             base_parameters:
               catalog: ${var.uc_catalog}
               bronze_schema: ${var.uc_bronze_schema}
@@ -117,7 +117,7 @@ resources:
           depends_on:
             - task_key: post_pipeline_verification
           notebook_task:
-            notebook_path: ${workspace.root_path}/notebooks_ipynb/06_analysis/seed_silver_test_data
+            notebook_path: ${workspace.root_path}/files/notebooks_ipynb/06_analysis/seed_silver_test_data
             base_parameters:
               execute: ${var.seed_silver_execute}
               catalog: ${var.uc_catalog}
