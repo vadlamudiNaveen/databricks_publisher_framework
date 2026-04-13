@@ -20,7 +20,7 @@ resources:
             autoscale:
               min_workers: ${var.min_workers}
               max_workers: ${var.max_workers}
-            python_libraries:
+            libraries:
               - pypi:
                   package: PyYAML==6.0.2
       tasks:
@@ -51,7 +51,7 @@ resources:
             autoscale:
               min_workers: ${var.min_workers}
               max_workers: ${var.max_workers}
-            python_libraries:
+            libraries:
               - pypi:
                   package: PyYAML==6.0.2
       tasks:
@@ -86,7 +86,7 @@ resources:
             autoscale:
               min_workers: ${var.min_workers}
               max_workers: ${var.max_workers}
-            python_libraries:
+            libraries:
               - pypi:
                   package: PyYAML==6.0.2
       tasks:
