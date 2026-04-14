@@ -55,21 +55,21 @@ publisher_defaults:
 
 publishers:
   connect:
-    bronze_catalog_name: ${CONNECT_BRONZE_CATALOG_NAME:${UC_CATALOG:eng511_development_bronze}}
+    bronze_catalog_name: ${CONNECT_BRONZE_CATALOG_NAME:eng511_development_bronze}
     bronze_db_name: ${CONNECT_BRONZE_DB_NAME:connect_poc}
-    silver_catalog_name: ${CONNECT_SILVER_CATALOG_NAME:${CATALOG_SILVER:eng511_development_silver}}
+    silver_catalog_name: ${CONNECT_SILVER_CATALOG_NAME:eng511_development_silver}
     silver_db_name: ${CONNECT_SILVER_DB_NAME:connect_poc}
   pia:
-    bronze_catalog_name: ${PIA_BRONZE_CATALOG_NAME:${UC_CATALOG:eng511_development_bronze}}
+    bronze_catalog_name: ${PIA_BRONZE_CATALOG_NAME:eng511_development_bronze}
     bronze_db_name: ${PIA_BRONZE_DB_NAME:pia_poc}
-    silver_catalog_name: ${PIA_SILVER_CATALOG_NAME:${CATALOG_SILVER:eng511_development_silver}}
+    silver_catalog_name: ${PIA_SILVER_CATALOG_NAME:eng511_development_silver}
     silver_db_name: ${PIA_SILVER_DB_NAME:pia_poc}
   mmia:
-    silver_catalog_name: ${MMIA_SILVER_CATALOG_NAME:${UC_CATALOG:eng511_development_bronze}}
-    silver_db_name: ${MMIA_SILVER_DB_NAME:${UC_SILVER_SCHEMA:silver}}
+    silver_catalog_name: ${MMIA_SILVER_CATALOG_NAME:eng511_development_bronze}
+    silver_db_name: ${MMIA_SILVER_DB_NAME:silver}
   bisa1:
-    silver_catalog_name: ${BISA1_SILVER_CATALOG_NAME:${UC_CATALOG:eng511_development_bronze}}
-    silver_db_name: ${BISA1_SILVER_DB_NAME:${UC_SILVER_SCHEMA:silver}}
+    silver_catalog_name: ${BISA1_SILVER_CATALOG_NAME:eng511_development_bronze}
+    silver_db_name: ${BISA1_SILVER_DB_NAME:silver}
 
 external_locations:
   env_roots:
