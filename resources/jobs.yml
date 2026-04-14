@@ -134,7 +134,7 @@ resources:
             base_parameters:
               execute: "true"
               config_dir: ${var.config_dir_path}
-              silver_catalog: ${var.catalog_silver}
+              silver_catalog: ${var.uc_silver_catalog}
               product_name: ""
               row_limit: ${var.seed_silver_row_limit}
               mode: ${var.seed_silver_mode}
