@@ -55,6 +55,14 @@ variables:
     description: Workspace path to config directory after bundle sync
     default: ${workspace.root_path}/files/config
 
+  checkpoint_root:
+    description: Auto Loader checkpoint base path
+    default: /Volumes/main/system/checkpoints
+
+  schema_tracking_root:
+    description: Auto Loader schema tracking base path
+    default: /Volumes/main/system/schema_tracking
+
   seed_silver_execute:
     description: Set true to run the optional silver test-data seeding task
     default: "false"
@@ -109,6 +117,8 @@ targets:
       uc_silver_schema: silver_dev
       uc_audit_schema: audit_dev
       uc_control_schema: control_dev
+      checkpoint_root: /Volumes/main/system/checkpoints
+      schema_tracking_root: /Volumes/main/system/schema_tracking
       existing_cluster_id: "0408-062709-xu0nb836"
       min_workers: 1
       max_workers: 2
@@ -125,5 +135,7 @@ targets:
       uc_silver_schema: silver
       uc_audit_schema: audit
       uc_control_schema: control
+      checkpoint_root: /Volumes/main/system/checkpoints
+      schema_tracking_root: /Volumes/main/system/schema_tracking
       min_workers: 2
       max_workers: 8
