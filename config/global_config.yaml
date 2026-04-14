@@ -65,10 +65,10 @@ publishers:
     silver_catalog_name: ${PIA_SILVER_CATALOG_NAME:eng511_development_silver}
     silver_db_name: ${PIA_SILVER_DB_NAME:pia_poc}
   mmia:
-    silver_catalog_name: ${MMIA_SILVER_CATALOG_NAME:eng511_development_bronze}
+    silver_catalog_name: ${MMIA_SILVER_CATALOG_NAME:eng511_development_silver}
     silver_db_name: ${MMIA_SILVER_DB_NAME:silver}
   bisa1:
-    silver_catalog_name: ${BISA1_SILVER_CATALOG_NAME:eng511_development_bronze}
+    silver_catalog_name: ${BISA1_SILVER_CATALOG_NAME:eng511_development_silver}
     silver_db_name: ${BISA1_SILVER_DB_NAME:silver}
 
 external_locations:
