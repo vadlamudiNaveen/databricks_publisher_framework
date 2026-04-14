@@ -121,6 +121,7 @@ resources:
             base_parameters:
               catalog: ${var.uc_catalog}
               control_schema: ${var.uc_control_schema}
+              bronze_schema: ${var.uc_bronze_schema}
               silver_schema: ${var.uc_silver_schema}
               product_names: pia,connect
               source_systems: ""
@@ -131,10 +132,9 @@ resources:
           notebook_task:
             notebook_path: ${workspace.root_path}/files/notebooks_ipynb/06_analysis/seed_silver_test_data
             base_parameters:
-              execute: ${var.seed_silver_execute}
-              catalog: ${var.uc_catalog}
-              silver_schema: ${var.uc_silver_schema}
-              source_table: ${var.seed_silver_source_table}
-              target_table: ${var.seed_silver_target_table}
+              execute: "true"
+              config_dir: ${var.config_dir_path}
+              silver_catalog: ${var.catalog_silver}
+              product_name: ""
               row_limit: ${var.seed_silver_row_limit}
               mode: ${var.seed_silver_mode}
