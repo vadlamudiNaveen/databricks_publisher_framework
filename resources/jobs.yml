@@ -12,6 +12,7 @@ resources:
             spark_env_vars:
               ENVIRONMENT: ${bundle.target}
               UC_CATALOG: ${var.uc_catalog}
+              UC_SILVER_CATALOG: ${var.uc_silver_catalog}
               UC_BRONZE_SCHEMA: ${var.uc_bronze_schema}
               UC_SILVER_SCHEMA: ${var.uc_silver_schema}
               UC_AUDIT_SCHEMA: ${var.uc_audit_schema}
@@ -50,6 +51,7 @@ resources:
             spark_env_vars:
               ENVIRONMENT: ${bundle.target}
               UC_CATALOG: ${var.uc_catalog}
+              UC_SILVER_CATALOG: ${var.uc_silver_catalog}
               UC_BRONZE_SCHEMA: ${var.uc_bronze_schema}
               UC_SILVER_SCHEMA: ${var.uc_silver_schema}
               UC_AUDIT_SCHEMA: ${var.uc_audit_schema}
@@ -92,6 +94,7 @@ resources:
             spark_env_vars:
               ENVIRONMENT: ${bundle.target}
               UC_CATALOG: ${var.uc_catalog}
+              UC_SILVER_CATALOG: ${var.uc_silver_catalog}
               UC_BRONZE_SCHEMA: ${var.uc_bronze_schema}
               UC_SILVER_SCHEMA: ${var.uc_silver_schema}
               UC_AUDIT_SCHEMA: ${var.uc_audit_schema}
