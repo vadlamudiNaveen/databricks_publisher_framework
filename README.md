@@ -51,7 +51,7 @@ Bundle quick commands:
 ```bash
 databricks bundle validate -t dev --var="databricks_host=<https://your-workspace-host>"
 databricks bundle deploy -t dev --var="databricks_host=<https://your-workspace-host>"
-databricks bundle run -t dev framework_initialize_infrastructure_once --var="databricks_host=<https://your-workspace-host>"
+databricks bundle run -t dev framework_initialize_infrastructure_once --
 databricks bundle run -t dev framework_setup_wizard_once --var="databricks_host=<https://your-workspace-host>"
 databricks bundle run -t dev framework_orchestrator_runtime --var="databricks_host=<https://your-workspace-host>"
 ```
