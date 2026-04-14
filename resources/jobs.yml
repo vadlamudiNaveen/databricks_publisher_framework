@@ -123,6 +123,7 @@ resources:
               control_schema: ${var.uc_control_schema}
               bronze_schema: ${var.uc_bronze_schema}
               silver_schema: ${var.uc_silver_schema}
+              silver_catalog: ${var.uc_silver_catalog}
               product_names: pia,connect
               source_systems: ""
         - task_key: seed_silver_test_data
