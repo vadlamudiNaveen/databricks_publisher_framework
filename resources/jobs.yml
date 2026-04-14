@@ -19,6 +19,11 @@ resources:
               CHECKPOINT_ROOT: ${var.checkpoint_root}
               SCHEMA_TRACKING_ROOT: ${var.schema_tracking_root}
               METADATA_CSV_ROOT: ${var.config_dir_path}
+              RAW_CONNECT_ROOT: ${var.raw_connect_root}
+              RAW_ITEMSUMMARY_ROOT: ${var.raw_itemsummary_root}
+              RAW_PIA_COMMONDIM_ITEM_ROOT: ${var.raw_pia_commondim_item_root}
+              RAW_PIA_COMMONDIM_VALUEBAG_ROOT: ${var.raw_pia_commondim_valuebag_root}
+              RAW_PIA_COMMONDIM_BAS_ROOT: ${var.raw_pia_commondim_bas_root}
             autoscale:
               min_workers: ${var.min_workers}
               max_workers: ${var.max_workers}
@@ -52,6 +57,11 @@ resources:
               CHECKPOINT_ROOT: ${var.checkpoint_root}
               SCHEMA_TRACKING_ROOT: ${var.schema_tracking_root}
               METADATA_CSV_ROOT: ${var.config_dir_path}
+              RAW_CONNECT_ROOT: ${var.raw_connect_root}
+              RAW_ITEMSUMMARY_ROOT: ${var.raw_itemsummary_root}
+              RAW_PIA_COMMONDIM_ITEM_ROOT: ${var.raw_pia_commondim_item_root}
+              RAW_PIA_COMMONDIM_VALUEBAG_ROOT: ${var.raw_pia_commondim_valuebag_root}
+              RAW_PIA_COMMONDIM_BAS_ROOT: ${var.raw_pia_commondim_bas_root}
             autoscale:
               min_workers: ${var.min_workers}
               max_workers: ${var.max_workers}
@@ -89,6 +99,11 @@ resources:
               CHECKPOINT_ROOT: ${var.checkpoint_root}
               SCHEMA_TRACKING_ROOT: ${var.schema_tracking_root}
               METADATA_CSV_ROOT: ${var.config_dir_path}
+              RAW_CONNECT_ROOT: ${var.raw_connect_root}
+              RAW_ITEMSUMMARY_ROOT: ${var.raw_itemsummary_root}
+              RAW_PIA_COMMONDIM_ITEM_ROOT: ${var.raw_pia_commondim_item_root}
+              RAW_PIA_COMMONDIM_VALUEBAG_ROOT: ${var.raw_pia_commondim_valuebag_root}
+              RAW_PIA_COMMONDIM_BAS_ROOT: ${var.raw_pia_commondim_bas_root}
             autoscale:
               min_workers: ${var.min_workers}
               max_workers: ${var.max_workers}

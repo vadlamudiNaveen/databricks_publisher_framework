@@ -63,6 +63,26 @@ variables:
     description: Auto Loader schema tracking base path
     default: abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/schema_tracking
 
+  raw_connect_root:
+    description: Root path for CONNECT raw data sources
+    default: abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/connect/
+
+  raw_itemsummary_root:
+    description: Root path for PIA ItemSummary raw data
+    default: abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/itemsummarypublicprd/
+
+  raw_pia_commondim_item_root:
+    description: Root path for PIA CommonDim Item raw data
+    default: abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/
+
+  raw_pia_commondim_valuebag_root:
+    description: Root path for PIA CommonDim ValueBag raw data
+    default: abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/valuebag/
+
+  raw_pia_commondim_bas_root:
+    description: Root path for PIA CommonDim BAS raw data
+    default: abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/bas/
+
   seed_silver_execute:
     description: Set true to run the optional silver test-data seeding task
     default: "false"
