@@ -119,7 +119,7 @@ resources:
               execute: "true"
               config-dir: ${var.config_dir_path}
               global-config: ${var.global_config_path}
-              parallel: "4"
+              parallel: "8"
               pk-check-summary: "true"
         - task_key: post_pipeline_verification
           job_cluster_key: framework_runtime_cluster
