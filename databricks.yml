@@ -134,7 +134,7 @@ targets:
       uc_catalog: eng511_development_bronze
       uc_silver_catalog: eng511_development_silver
       uc_bronze_schema: bronze_dev
-      uc_silver_schema: silver_dev
+      uc_silver_schema: silver
       uc_audit_schema: audit_dev
       uc_control_schema: control_dev
       checkpoint_root: abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/checkpoints
