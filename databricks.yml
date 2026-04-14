@@ -73,15 +73,15 @@ variables:
 
   raw_pia_commondim_item_root:
     description: Root path for PIA CommonDim Item raw data
-    default: abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/
+    default: abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/item/
 
   raw_pia_commondim_valuebag_root:
     description: Root path for PIA CommonDim ValueBag raw data
-    default: abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/valuebag/
+    default: abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/valuebag/
 
   raw_pia_commondim_bas_root:
     description: Root path for PIA CommonDim BAS raw data
-    default: abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/bas/
+    default: abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/bas/
 
   seed_silver_execute:
     description: Set true to run the optional silver test-data seeding task
