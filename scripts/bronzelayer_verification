@@ -1,0 +1,166 @@
+"""Post-run metadata/table verification script for Databricks Spark sessions.
+
+Run this in a Databricks notebook (or any Spark environment with `spark` available):
+  %run /Workspace/.../files/scripts/bronzelayer_verification
+"""
+
+import json
+
+
+def _parse_csv_list(value: str) -> list[str]:
+    return [v.strip() for v in value.split(",") if v.strip()]
+
+
+def _sql_in(values: list[str]) -> str:
+    escaped = [v.replace("'", "''") for v in values]
+    return ", ".join(f"'{v}'" for v in escaped)
+
+
+def run_verification(
+    spark,
+    catalog: str = "eng511_development_bronze",
+    control_schema: str = "control_dev",
+    silver_schema: str = "silver_dev",
+    product_names: list[str] | None = None,
+    source_systems: list[str] | None = None,
+):
+    result = {}
+    product_names = product_names or ["pia", "connect"]
+    source_systems = source_systems or []
+
+    print("\n" + "=" * 80)
+    print("TABLE DATA CHECK - INGESTION FRAMEWORK")
+    print("=" * 80)
+
+    print("\n1. SOURCE REGISTRY - ACTIVE SOURCES")
+    print("-" * 80)
+    filters = ["lower(cast(is_active as string)) IN ('true', '1', 'yes', 'y', 't')"]
+    if product_names:
+        filters.append(f"lower(product_name) IN ({_sql_in([p.lower() for p in product_names])})")
+    if source_systems:
+        filters.append(f"lower(source_system) IN ({_sql_in([s.lower() for s in source_systems])})")
+
+    active_sources_query = f"""
+        SELECT
+            product_name,
+            source_system,
+            source_entity,
+            source_type,
+            is_active,
+            landing_table,
+            silver_table
+        FROM {catalog}.{control_schema}.source_registry
+        WHERE {' AND '.join(filters)}
+        ORDER BY product_name, source_system, source_entity
+    """
+
+    active_sources_df = spark.sql(
+        active_sources_query
+    )
+    active_sources_df.show(50, False)
+    result["active_sources"] = [r.asDict(recursive=True) for r in active_sources_df.collect()]
+
+    print("\n2. CONTROL TABLE ROW COUNTS")
+    print("-" * 80)
+    counts = {}
+    for table in ["source_registry", "column_mapping", "dq_rules", "publish_rules"]:
+        cnt = spark.sql(f"SELECT COUNT(*) as cnt FROM {catalog}.{control_schema}.{table}").collect()[0][0]
+        counts[table] = int(cnt)
+        print(f"  {table}: {cnt} rows")
+    result["control_counts"] = counts
+
+    print("\n3. ALL SCHEMAS IN CATALOG")
+    print("-" * 80)
+    schemas_df = spark.sql(f"SHOW SCHEMAS IN {catalog}")
+    schemas_df.show(50, False)
+    result["schemas"] = [r.asDict(recursive=True) for r in schemas_df.collect()]
+
+    print("\n4. LIST SILVER TABLES")
+    print("-" * 80)
+    try:
+        silver_df = spark.sql(f"SHOW TABLES IN {catalog}.{silver_schema}")
+        silver_df.show(200, False)
+        result["silver_dev_tables"] = [r["tableName"] for r in silver_df.collect()]
+    except Exception as exc:
+        result["silver_dev_tables"] = [f"ERROR: {str(exc)}"]
+
+    print("\n5. SOURCE CONFIG FOR FILTERED FLOWS")
+    print("-" * 80)
+    try:
+        cfg_df = spark.sql(
+            active_sources_query
+        )
+        cfg_df.show(20, False)
+        rows = cfg_df.collect()
+        result["source_config"] = [r.asDict(recursive=True) for r in rows] if rows else []
+    except Exception as exc:
+        result["source_config"] = [f"ERROR: {str(exc)}"]
+
+    print("\n6. PUBLISH RULES FOR FILTERED FLOWS")
+    print("-" * 80)
+    try:
+        entities = [r["source_entity"] for r in active_sources_df.select("source_entity").distinct().collect()]
+        if entities:
+            pub_df = spark.sql(
+                f"SELECT * FROM {catalog}.{control_schema}.publish_rules WHERE source_entity IN ({_sql_in(entities)})"
+            )
+            pub_df.show(200, False)
+            result["publish_rules"] = [r.asDict(recursive=True) for r in pub_df.collect()]
+        else:
+            result["publish_rules"] = []
+    except Exception as exc:
+        result["publish_rules"] = [f"ERROR: {str(exc)}"]
+
+    print("\n7. LANDING/SILVER ROW COUNTS (PER ACTIVE SOURCE)")
+    print("-" * 80)
+    table_checks = []
+    for src in active_sources_df.collect():
+        rec = {
+            "product_name": src["product_name"],
+            "source_system": src["source_system"],
+            "source_entity": src["source_entity"],
+            "landing_table": src["landing_table"],
+            "silver_table": src["silver_table"],
+            "landing_rows": None,
+            "silver_rows": None,
+            "landing_error": None,
+            "silver_error": None,
+        }
+
+        if src["landing_table"]:
+            try:
+                rec["landing_rows"] = int(
+                    spark.sql(f"SELECT COUNT(*) AS c FROM {src['landing_table']}").collect()[0]["c"]
+                )
+            except Exception as exc:
+                rec["landing_error"] = str(exc)
+
+        if src["silver_table"]:
+            try:
+                rec["silver_rows"] = int(
+                    spark.sql(f"SELECT COUNT(*) AS c FROM {src['silver_table']}").collect()[0]["c"]
+                )
+            except Exception as exc:
+                rec["silver_error"] = str(exc)
+
+        table_checks.append(rec)
+
+    result["table_checks"] = table_checks
+
+    print("\n" + "=" * 80)
+    print("END OF TABLE DATA CHECK")
+    print("=" * 80)
+    return result
+
+
+if "spark" not in globals():
+    raise RuntimeError("spark session not found. Run this script inside Databricks notebook context.")
+
+summary = run_verification(
+    spark,
+    product_names=_parse_csv_list("pia,connect"),
+    source_systems=[],
+)
+
+if "dbutils" in globals():
+    dbutils.notebook.exit(json.dumps(summary, indent=2, default=str))

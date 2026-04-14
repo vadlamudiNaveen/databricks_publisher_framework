@@ -112,10 +112,22 @@ resources:
               silver_schema: ${var.uc_silver_schema}
               audit_schema: ${var.uc_audit_schema}
               control_schema: ${var.uc_control_schema}
-        - task_key: seed_silver_test_data
+        - task_key: table_values_verification
           job_cluster_key: framework_runtime_cluster
           depends_on:
             - task_key: post_pipeline_verification
+          notebook_task:
+            notebook_path: ${workspace.root_path}/files/notebooks_ipynb/06_analysis/table_values_verification
+            base_parameters:
+              catalog: ${var.uc_catalog}
+              control_schema: ${var.uc_control_schema}
+              silver_schema: ${var.uc_silver_schema}
+              product_names: pia,connect
+              source_systems: ""
+        - task_key: seed_silver_test_data
+          job_cluster_key: framework_runtime_cluster
+          depends_on:
+            - task_key: table_values_verification
           notebook_task:
             notebook_path: ${workspace.root_path}/files/notebooks_ipynb/06_analysis/seed_silver_test_data
             base_parameters:
