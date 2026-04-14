@@ -11,9 +11,8 @@ This repository now includes Databricks Asset Bundles files:
 
 Note: default bundle deployment path currently includes jobs only. The pipeline resource in `resources/pipelines.yml` requires Unity Catalog `CREATE TABLE` privileges on target schemas.
 
-Target isolation defaults are preconfigured:
-- `dev` uses `main.bronze_dev`, `main.silver_dev`, `main.audit_dev`, `main.control_dev`
-- `prod` uses `main.bronze`, `main.silver`, `main.audit`, `main.control`
+Target isolation defaults are preconfigured by bundle variables.
+Use the values in databricks.yml for your environment.
 
 Use bundle commands from the repository root:
 
@@ -41,6 +40,12 @@ Run recurring orchestrator job:
 databricks bundle run -t dev framework_orchestrator_runtime
 ```
 
+Track run status:
+
+```bash
+databricks jobs get-run <run_id> --output json
+```
+
 Promote and run in prod target:
 
 ```bash
@@ -59,6 +64,26 @@ Minimum required values:
 - Databricks catalog/schema names
 - checkpoint and schema tracking roots
 - source paths / API/JDBC profile references
+
+### Update A Source File Path
+
+When a source path changes, update it in config/source_registry.csv.
+
+1. Locate source row by product_name, source_system, source_entity.
+2. Update source_path.
+3. Verify source_format (json/jsonl/delta/csv/parquet).
+4. Verify source_options_json (recursiveFileLookup/pathGlobFilter/file_ingest_mode).
+
+Example:
+
+- Before: ${RAW_CONNECT_ROOT:abfss://.../eng511/raw_data/connect/}
+- After:  ${RAW_CONNECT_ROOT:abfss://.../eng511/raw_data/connect_new/}
+
+Optional env override pattern:
+
+```bash
+export RAW_CONNECT_ROOT="abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/connect_new/"
+```
 
 Optional source metadata now supported in `source_registry.csv`:
 - `scheduler_name`
@@ -97,13 +122,38 @@ For recurring production runs, execute only:
 
 `pipelines/lakeflow_pipeline.json` is already aligned to this runtime model.
 
-## 5. Verify
+## 5. Execute End-To-End (Copy/Paste)
+
+```bash
+python scripts/validate_configs.py
+python3 scripts/generate_notebooks_ipynb.py
+databricks bundle deploy -t dev
+databricks bundle run -t dev framework_initialize_infrastructure_once
+databricks bundle run -t dev framework_setup_wizard_once
+databricks bundle run -t dev framework_orchestrator_runtime --no-wait
+```
+
+## 6. Verify
 
 Expected outcomes:
 - Catalog and schemas exist
 - control and audit tables exist
 - dry-run succeeds
 - runtime pipeline executes active sources
+
+Verification SQL:
+
+```sql
+SELECT COUNT(*) AS bronze_count
+FROM system.information_schema.tables
+WHERE table_schema = 'bronze_dev'
+	AND table_catalog = 'eng511_development_bronze';
+
+SELECT COUNT(*) AS silver_count
+FROM system.information_schema.tables
+WHERE table_schema = 'silver'
+	AND table_catalog = 'eng511_development_silver';
+```
 
 ## Operational Model
 

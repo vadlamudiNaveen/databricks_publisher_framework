@@ -1,855 +1,202 @@
 # Metadata-Driven Databricks Ingestion Framework
 
-> Enterprise-grade, configuration-first data ingestion and processing framework for Databricks. Onboard new data sources without code changes—just update metadata.
+Onboard and run data pipelines in Databricks by editing metadata files, not framework code.
 
-**What is this?**
+This README is written for a fresher in data engineering who wants to run the framework end-to-end without external help.
 
-This framework helps you move and process data from different sources (like files, databases, or APIs) into Databricks in a repeatable, automated way. It uses a "metadata-driven" approach, which means you control what happens by editing configuration files (not by writing lots of new code). This makes it easy to onboard new data sources or change behavior by just updating a spreadsheet or YAML file.
+## Start Here First
 
-**For those new to Databricks or metadata-driven pipelines:**
-- **Databricks** is a cloud platform for big data analytics and machine learning, built on Apache Spark. It lets you run data processing jobs at scale.
-- **Metadata-driven** means you describe your data sources, rules, and processing steps in config files (like CSV or YAML), not in code. The framework reads these files and does the work for you.
-- **Why is this useful?** You can add new data sources, change rules, or update processing logic without needing to be a Python or Spark expert—just update the configs and rerun the pipeline.
+If you are opening this project for the first time, do these 3 things:
 
-This framework provides reusable engines for different data types (files, databases, APIs), so you don't have to reinvent the wheel for each new source. It is designed to be easy to extend, test, and operate, even for teams with mixed technical backgrounds.
+1. Read docs/DATABRICKS_QUICKSTART.md once.
+2. Run the copy-paste command block in "First Run (Databricks)" below.
+3. Use "Verify After Run" SQL to confirm Bronze and Silver outputs.
 
-## Goals
-- Configuration-first onboarding
-- Global config-first runtime (no hardcoded environment values)
-- Reusable ingestion, conformance, DQ, publish, and audit engines
-- 1:1 Landing/Bronze raw preservation
-- Minimal source-specific custom code
-- Multi-product, multi-entity onboarding with shared framework code
+## What This Framework Does
 
-## Repository Layout
-- `config/`: metadata control files
-- `config/global_config.yaml`: centralized runtime and Databricks connection configuration
-- `config/.env.example`: environment variable template for all deploy-specific values
-- `notebooks/`: reusable Python modules matching Databricks notebook responsibilities
-- `sql/`: DDL and merge templates
-- `pipelines/`: Lakeflow pipeline configuration placeholder
-- `scripts/`: utility scripts (metadata validation)
-- `tests/`: unit, integration, and DQ tests
-- `docs/`: architecture, onboarding, runbook
+The framework processes source data in this flow:
 
-## Quick Start
+1. Ingestion (read source files/JDBC/API)
+2. Landing/Bronze write
+3. Conformance transformation
+4. DQ checks
+5. Silver publish
+6. Audit logging
 
-### For Databricks Users (Recommended)
-👉 **Follow [Databricks Quick Start Guide](docs/DATABRICKS_QUICKSTART.md)** - Fully automated setup wizard with just 3 steps:
-1. Update `config/global_config.yaml` with your workspace details
-2. Import notebooks from `notebooks_ipynb/`
-3. Run the setup wizard notebook (creates everything automatically)
+You control behavior using metadata in config files.
 
-### Databricks Asset Bundles (Infrastructure as Code)
-This repository includes a full Databricks Asset Bundles setup:
-- `databricks.yml`
-- `resources/jobs.yml`
-- `resources/pipelines.yml`
+## Prerequisites
 
-Bundle quick commands:
+Before running commands, ensure:
+
+1. Python 3.10+ is installed.
+2. Databricks CLI is installed and authenticated.
+3. You are in repository root.
+4. You have Unity Catalog permissions for target catalog/schemas.
+
+Quick auth check:
 
 ```bash
-databricks bundle validate -t dev --var="databricks_host=<https://your-workspace-host>"
-databricks bundle deploy -t dev --var="databricks_host=<https://your-workspace-host>"
-databricks bundle run -t dev framework_initialize_infrastructure_once --
-databricks bundle run -t dev framework_setup_wizard_once --var="databricks_host=<https://your-workspace-host>"
-databricks bundle run -t dev framework_orchestrator_runtime --var="databricks_host=<https://your-workspace-host>"
+databricks current-user me
 ```
 
-### Recommended Databricks CLI Run Order (Current Project)
+## Key Files You Will Edit
 
-Use this exact order for first-time setup and validation:
+1. config/global_config.yaml: environment and runtime config
+2. config/source_registry.csv: source-level setup, source path, formats
+3. config/column_mapping.csv: conformance mappings
+4. config/dq_rules.csv: DQ rules
+5. config/publish_rules.csv: silver publish behavior
+
+## First Run (Databricks)
+
+Run these commands in this exact order:
 
 ```bash
-# 1) Generate notebook artifacts from python modules
+# 1) Validate metadata
+python scripts/validate_configs.py
+
+# 2) Generate notebook artifacts from Python modules
 python3 scripts/generate_notebooks_ipynb.py
 
-# 2) Deploy bundle resources and synced files
+# 3) Deploy bundle to Databricks
 databricks bundle deploy -t dev
 
-# 3) Initialize UC catalog/schemas/tables and bootstrap control metadata
+# 4) One-time initialization (create/sync schemas and control metadata)
 databricks bundle run -t dev framework_initialize_infrastructure_once
 
-# 4) Validate setup
+# 5) One-time setup validation
 databricks bundle run -t dev framework_setup_wizard_once
 
-# 5) Run ingestion pipeline
+# 6) Run orchestrator
 databricks bundle run -t dev framework_orchestrator_runtime --no-wait
 ```
 
-To track a specific run status:
+Track run status:
 
 ```bash
 databricks jobs get-run <run_id> --output json
 ```
 
-### One Command POC Automation (No Manual Steps)
+## How To Update Source Path Or Source Files
 
-Run everything (generate notebooks, deploy, import notebooks, initialize, setup wizard, start orchestrator):
+Use this when your raw data folder changes or you onboard a new file source.
+
+### Step 1: Update source path metadata
+
+Open config/source_registry.csv and update:
+
+1. source_path
+2. source_format (json/jsonl/delta/csv/parquet)
+3. source_options_json (for recursive lookup, glob filters, autoloader)
+
+Example source_path change:
+
+- Before: ${RAW_CONNECT_ROOT:abfss://.../eng511/raw_data/connect/}
+- After: ${RAW_CONNECT_ROOT:abfss://.../eng511/raw_data/connect_new/}
+
+### Step 2: Optional env var override
+
+Instead of hardcoding a full path in CSV, use env variable override:
 
 ```bash
-./scripts/run_poc_end_to_end.sh dev 0408-062709-xu0nb836
+export RAW_CONNECT_ROOT="abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/connect_new/"
 ```
 
-Notes:
-- Arg 1: target (`dev` by default)
-- Arg 2: cluster id (`0408-062709-xu0nb836` by default)
-- The script runs orchestrator with `--no-wait` at the end.
-
-## Where Raw Data Paths Are Stored And How To Change
-
-Primary location:
-- `config/source_registry.csv` → `source_path` column
-
-This project now supports global path overrides via environment variables in `source_path` values:
-
-- `RAW_CONNECT_ROOT`
-- `RAW_ITEMSUMMARY_ROOT`
-- `RAW_PIA_COMMONDIM_ITEM_ROOT`
-- `RAW_PIA_COMMONDIM_VALUEBAG_ROOT`
-- `RAW_PIA_COMMONDIM_BAS_ROOT`
-
-Example override before run:
+### Step 3: Validate and execute
 
 ```bash
-export RAW_CONNECT_ROOT="abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/connect/"
-export RAW_ITEMSUMMARY_ROOT="abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/itemsummarypublicprd/"
-```
-
-Then run one-command flow:
-
-```bash
-./scripts/run_poc_end_to_end.sh
-```
-
-## Incremental Load Behavior For Connect Root (POC)
-
-For `connect.cemc.countryriskdet`, the active metadata row uses:
-
-- `source_path=${RAW_CONNECT_ROOT:.../raw_data/connect/}`
-- `file_ingest_mode=autoloader`
-- `recursiveFileLookup=true`
-- `pathGlobFilter=*/deltaload/*.json*`
-- `load_type=incremental`
-
-Meaning:
-1. It scans all nested folders under `raw_data/connect/`.
-2. It only includes JSON/JSONL files in `deltaload` subfolders.
-3. Auto Loader checkpoint tracks processed files across runs.
-4. New files in matching folders are picked up incrementally.
-
-For POC cutoff control, set:
-
-```bash
-export POC_INCREMENTAL_START_TS="2026-04-01T00:00:00Z"
-```
-
-This value is wired in source options for controlled incremental testing.
-
-## Are All Files In Folder Processed?
-
-Yes, for rows with `recursiveFileLookup=true`.
-
-For the connect POC row, all files matching this pattern are processed:
-- `.../raw_data/connect/**/deltaload/*.json*`
-
-If you want to narrow it further, adjust `pathGlobFilter` in `config/source_registry.csv`.
-
-### Orchestration Files In `notebooks/05_orchestration`
-- `framework_orchestrator.py`: recurring runtime execution (ingest -> landing -> conformance -> DQ -> silver)
-- `initialize_framework.py`: one-time idempotent Unity Catalog and table provisioning
-- `setup_wizard.py`: one-time guided setup and validation workflow
-
-Pipeline usage model:
-- Lakeflow runtime pipeline should run only `framework_orchestrator.py`
-- One-time setup jobs should run `initialize_framework.py` and `setup_wizard.py`
-- Setup jobs template is provided in `pipelines/databricks_setup_jobs.json`
-
-### For Local Development (Without Spark)
-1. Set environment values from `config/.env.example`.
-2. Update `config/global_config.yaml` for your environment.
-3. Run dry-run orchestration: `python notebooks/05_orchestration/framework_orchestrator.py`.
-4. (Local execution validates config/metadata - real data loading requires Databricks)
-
-### Local CLI (No Databricks Runtime)
-
-These commands are safe on a laptop/CI runner and do not require Spark writes:
-
-```bash
-# create env
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements-dev.txt
-
-# validate metadata files
 python scripts/validate_configs.py
-
-# dry-run orchestration plan
-python notebooks/05_orchestration/framework_orchestrator.py
-
-# targeted dry-run test
-python notebooks/05_orchestration/framework_orchestrator.py --product-name connect --source-system cemc --source-entity countryriskdet
+python3 scripts/generate_notebooks_ipynb.py
+databricks bundle deploy -t dev
+databricks bundle run -t dev framework_initialize_infrastructure_once
+databricks bundle run -t dev framework_orchestrator_runtime --no-wait
 ```
 
-### For Manual Databricks Setup (Advanced)
-See [Full Databricks Setup Guide](docs/DATABRICKS_SETUP_FULL.md) for detailed manual SQL steps.
+### Step 4: Test only one source (recommended)
 
-## Copy-Paste Commands
+```bash
+python notebooks/05_orchestration/framework_orchestrator.py \
+  --product-name connect \
+  --source-system cemc \
+  --source-entity countryriskdet
+```
 
-### 1) Setup Local Python Environment
+## Local Dry-Run (No Spark Writes)
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
-```
 
-### 2) Validate Metadata Config Files
-
-```bash
 python scripts/validate_configs.py
-```
-
-### 3) Generate Databricks Notebooks (.ipynb)
-
-```bash
-python scripts/generate_notebooks_ipynb.py
-```
-
-### 4) Run Orchestrator Dry-Run (All Active Sources)
-
-```bash
 python notebooks/05_orchestration/framework_orchestrator.py
 ```
 
-### 5) Run Orchestrator Dry-Run (Single Source)
+## Verify After Run
 
-```bash
-python notebooks/05_orchestration/framework_orchestrator.py --product-name connect --source-system cemc --source-entity countryriskdet --pk-check-summary
-```
-
-### 6) Run Orchestrator Execute Mode (Databricks Spark Runtime)
-
-```bash
-python notebooks/05_orchestration/framework_orchestrator.py --execute --pk-check-summary
-```
-
-### 7) Run With Parallel Workers
-
-```bash
-python notebooks/05_orchestration/framework_orchestrator.py --execute --parallel 4 --pk-check-summary
-```
-
-## Run And Verify
-
-### Local Verification (No Spark Required)
-1. Activate environment:
-	- `source .venv/bin/activate`
-2. Run unit tests:
-	- `python -m pytest -q tests/unit`
-	- Verifies core module behavior (config loaders, validators, utilities).
-3. Run full test suite:
-	- `python -m pytest -q tests`
-	- Verifies unit + integration placeholders + DQ tests in this repository.
-4. Validate metadata files:
-	- `python scripts/validate_configs.py`
-	- Checks required headers and semantic constraints (source type fields, JSON columns, merge keys).
-5. Run orchestrator dry-run:
-	- `python notebooks/05_orchestration/framework_orchestrator.py`
-	- Produces a JSON execution plan from active metadata without Spark writes.
-6. Run orchestrator dry-run for one source:
-	- `python notebooks/05_orchestration/framework_orchestrator.py --product-name connect --source-system cemc --source-entity countryriskdet`
-	- If this returns `[]`, your filters do not match an active row in `config/source_registry.csv`.
-	- Use `python notebooks/05_orchestration/framework_orchestrator.py --product-name connect` to run all active connect sources.
-	- Activate the sample `sales/crm/accounts` row in `config/source_registry.csv` before using sales/crm filters.
-	- Useful to validate a single source onboarding before full runs.
-
-### Databricks Execution (Spark Required)
-- Command:
-  - `python notebooks/05_orchestration/framework_orchestrator.py --execute`
-- What it does:
-  - Ingests active sources, writes landing/conformance, runs DQ, publishes to silver, and writes audit rows.
-
-## Running the Orchestrator (CLI Options)
-
-### Default: Run All File Path Sources (Dry Run)
-
-```
-python notebooks/05_orchestration/framework_orchestrator.py
-```
-
-### Run for a Specific Source
-
-You can run the orchestrator for a specific source system and/or entity using:
-
-```
-python notebooks/05_orchestration/framework_orchestrator.py --source-system cemc --source-entity countryriskdet
-```
-
-You can also filter by product name:
-
-```
-python notebooks/05_orchestration/framework_orchestrator.py --product-name connect
-```
-
-### Execute with Spark (Databricks runtime)
-
-```
-python notebooks/05_orchestration/framework_orchestrator.py --execute
-```
-
-## Archiving Data in the Bronze Layer
-
-The bronze (landing) layer is written using `add_landing_metadata()` and `write_landing()` in `landing_engine.py`. To support archiving, you can:
-
-- Add `archive_mode` and `archive_table` (or path) to your config.
-- Update `write_landing()` to optionally write to both the main and archive destinations based on config or a command-line flag.
-
-This allows you to control archiving location and behavior without code changes. See `notebooks/02_processing/landing_engine.py` for extension points.
-
-## Unity Catalog Prerequisites For `--execute`
-`--execute` assumes target catalog/schemas/tables already exist and the runtime identity can read/write them.
-
-Recommended:
-- Run `setup_wizard.py` once before recurring execution to auto-create catalog, schemas, control tables, and audit tables.
-- Use `pipelines/databricks_setup_jobs.json` to create one-time setup jobs.
-
-### 1) Required Environment Variables
-Set these before execution (from `config/.env.example`):
-- `UC_CATALOG`
-- `UC_BRONZE_SCHEMA`
-- `UC_SILVER_SCHEMA`
-- `UC_AUDIT_SCHEMA`
-- `CHECKPOINT_ROOT`
-- `SCHEMA_TRACKING_ROOT`
-
-### 2) Required Global Config Values
-Ensure these are set in `config/global_config.yaml`:
-- `databricks.catalog`
-- `databricks.bronze_schema`
-- `databricks.silver_schema`
-- `databricks.audit_schema`
-- `audit.pipeline_runs_table`
-- `audit.dq_results_table`
-- `audit.rejects_table`
-
-### 3) Required UC Objects (If Skipping Setup Wizard)
-Create these before run only if you do not execute `setup_wizard.py`:
-1. Catalog: `UC_CATALOG`
-2. Schemas:
-	- `UC_BRONZE_SCHEMA`
-	- `UC_SILVER_SCHEMA`
-	- `UC_AUDIT_SCHEMA`
-	- Control schema used by metadata tables if running `metadata.mode: table` (for example `control`).
-3. Tables:
-	- Landing/conformance/silver tables referenced in `config/source_registry.csv`
-	- Audit table from `audit.pipeline_runs_table`
-	- DQ results table from `audit.dq_results_table`
-	- Rejects table from `audit.rejects_table`
-	- Control tables (`source_registry`, `column_mapping`, `dq_rules`, `publish_rules`) if using table mode
-
-### 4) Permissions
-The Databricks job principal/service principal must have:
-1. `USE CATALOG` on target catalog
-2. `USE SCHEMA`, `CREATE TABLE`, `SELECT`, `INSERT`, `UPDATE`, `DELETE` on target schemas/tables as needed
-3. Read/write access to checkpoint and schema tracking storage paths
-
-## Full And Incremental Loads
-- Use `load_type` in `config/source_registry.csv` with values `full` or `incremental`.
-- FILE sources:
-	- `full`: batch ingest of full path.
-	- `incremental`: batch ingest with optional `incremental_start_timestamp` in `source_options_json`, or Auto Loader mode for continuous ingestion.
-- JDBC/API sources:
-	- `incremental`: uses `watermark_column` + `incremental_start_value` from `source_options_json`.
-	- `full`: reads full source.
-
-## Primary Key DQ Checks (Built-in)
-- The DQ engine now enforces primary key quality automatically when `primary_key` is configured in `config/source_registry.csv`.
-- Built-in checks:
-	- `primary_key_not_null`: fails rows where any PK column is null.
-	- `primary_key_unique`: fails rows where PK (including composite keys) is duplicated.
-- These checks run in addition to metadata-driven DQ rules from `config/dq_rules.csv`.
-- Failed PK checks are appended into `dq_failed_rule` and marked as `dq_status=FAIL`.
-
-## Managed vs External Tables
-- The framework supports per-layer storage mode using source metadata:
-	- `landing_table_type`, `conformance_table_type`, `silver_table_type`: `managed` or `external`
-	- `landing_table_path`, `conformance_table_path`, `silver_table_path`: required when table type is `external`
-- Default behavior is `managed` when these fields are not provided.
-- Additional optional source metadata supported:
-	- `scheduler_name`
-	- `schedule_cron`
-	- `retention_days`
-	- `sttm_profile`
-- Recommended pattern:
-	- Landing (raw/bronze): external allowed and often preferred for storage governance.
-	- Conformance/Silver: managed by default unless external is required by policy/integration.
-
-## Control Folder Files: Delta vs Parquet (Important)
-
-Control tables are created as Delta tables at external locations under `.../eng511/control/<table_name>/`.
-
-Delta storage always includes:
-- `_delta_log/00000000000000000000.json` (transaction log)
-- one or more `part-*.snappy.parquet` data files at the table root
-
-If you only see `_delta_log/*.json`, it usually means:
-1. table was created but not populated yet, or
-2. UI is currently focused only on `_delta_log` subfolder.
-
-To verify table data exists, run in Databricks SQL editor:
+Run these in Databricks SQL after orchestrator finishes.
 
 ```sql
-SELECT count(*) FROM eng511_development_bronze.control.source_registry;
-SELECT count(*) FROM eng511_development_bronze.control.column_mapping;
-SELECT count(*) FROM eng511_development_bronze.control.dq_rules;
-SELECT count(*) FROM eng511_development_bronze.control.publish_rules;
-DESCRIBE DETAIL eng511_development_bronze.control.source_registry;
+-- Bronze table count
+SELECT COUNT(*) AS bronze_count
+FROM system.information_schema.tables
+WHERE table_schema = 'bronze_dev'
+  AND table_catalog = 'eng511_development_bronze';
+
+-- Silver table count
+SELECT COUNT(*) AS silver_count
+FROM system.information_schema.tables
+WHERE table_schema = 'silver'
+  AND table_catalog = 'eng511_development_silver';
+
+-- Bronze table list with row estimates
+SELECT table_name, num_rows
+FROM system.information_schema.tables
+WHERE table_schema = 'bronze_dev'
+  AND table_catalog = 'eng511_development_bronze'
+ORDER BY table_name;
+
+-- Silver table list with row estimates
+SELECT table_name, num_rows
+FROM system.information_schema.tables
+WHERE table_schema = 'silver'
+  AND table_catalog = 'eng511_development_silver'
+ORDER BY table_name;
 ```
 
-Note: Delta already stores data in Parquet format. The JSON file you saw is expected Delta log metadata.
+If num_rows is null, run direct COUNT(*) for specific tables.
 
-## Current Raw Data Notes (April 2026)
+## Common Problems And Fixes
 
-Current source landscape:
+1. Missing env variables
+Set values from config/.env.example before deployment.
 
-- `abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/connect/`
-	- CRC simple JSON + JSONL (mixed)
-- `abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/commondimensions/`
-	- CRC simple JSON (mixed structured)
-- `abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/itemsummarypublicprd/baseload/`
-	- ODL complex JSON (large copy window)
-- `abfss://rngpub@adlsdnapdevbronze.dfs.core.windows.net/eng511/raw_data/pia/itemsummarypublicprd/deltaload/`
-	- ODL complex JSON (current-month subset; copy is slow)
+2. Table/schema not found
+Run initialize and setup jobs once before orchestrator runtime.
 
-Operational note:
-- These paths are not yet refreshed daily (scheduled refresh jobs pending).
+3. Path not found
+Check source_path in config/source_registry.csv and env var overrides.
 
-STTM/metadata references for CONNECT:
-- `eng511_development_bronze.metadata.source_files_list_vw`
-- `eng511_development_bronze.metadata.sttm_vw`
+4. Wrong output layer (for example silver under bronze catalog)
+Check bundle variables in databricks.yml and resources/jobs.yml.
 
-Recommended low-risk test strategy:
-1. Start with connect + one entity (`cemc.countryriskdet`) using dry-run.
-2. Run execute for that single source before full orchestrator run.
-3. Add heavy ODL sources (`itemsummarypublicprd`) only after spot-checking runtime/cost.
+## Advanced Topics
 
-## ODL JSON Performance Model
+Use these docs after you complete your first successful run:
 
-ODL JSON files (e.g. `pia/itemsummarypublicprd`) are large, multi-line, deeply nested objects with embedded arrays. Simple flattening is slow for five specific reasons.
+1. docs/DATABRICKS_QUICKSTART.md
+2. docs/DATABRICKS_SETUP_FULL.md
+3. docs/onboarding_guide.md
+4. docs/runbook.md
+5. docs/architecture.md
+6. docs/framework_reference.md
+7. docs/adr/ADR-001-auto-loader-vs-dlt.md
+8. docs/adr/ADR-003-orchestration-parallelism.md
 
-### Why Simple Flattening Is Slow
+## Design Principles
 
-| Root Cause | What Happens |
-|---|---|
-| `multiLine=true` on native json format | One Spark task per file — no intra-file parallelism |
-| Schema inference (`inferSchema`) | Scans the entire dataset **twice** before reading a single row |
-| Full flatten of all struct columns | Reads every nested field even ones never queried downstream |
-| Array explode inline | 1 source row → N×M rows (multiplicative blowup per array) |
-| No predicate pushdown on JSON | Every filter reads the full file byte-for-byte |
-
-### Correct 3-Layer ODL Pipeline Model
-
-```
-Source files (large multiLine ODL JSON)
-         │
-         ▼
-Landing (binaryFile)           one row per FILE, no parsing, no schema cost
-  source_options: {"json_parse_mode": "raw_string"}
-  columns: path, modificationTime, raw_payload (string)
-         │
-         ▼
-Conformance (scalar extraction) get_json_object per column, explicit paths only
-  NO arrays exploded here
-  transform_expression: get_json_object(raw_payload, '$.itemNo')
-         │
-         ├──► Silver root entity   flat, typed scalars — merge on item_no
-         │
-         ├──► Silver array child 1  (e.g. localRetailItems)
-         │      separate source_registry row, explode ONE array
-         │      from_json with EXPLICIT DDL schema (not inference)
-         │
-         └──► Silver array child 2  (e.g. measurements, categoryPaths)
-                separate entity, isolated merge, separate Z-order
-```
-
-**Key rule:** each array becomes its own `source_registry` row and its own silver Delta table. Never explode multiple arrays in one pass.
-
-### How To Configure in Metadata (No Code Changes)
-
-Set in `source_options_json` for any ODL/complex JSON source:
-
-```json
-{
-  "file_ingest_mode": "batch",
-  "recursiveFileLookup": "true",
-  "json_parse_mode": "raw_string"
-}
-```
-
-Then in `column_mapping.csv`, use `get_json_object` as `transform_expression` for every scalar field:
-
-| `transform_expression` | `conformance_column` |
-|---|---|
-| `get_json_object(raw_payload, '$.itemNo')` | `item_no` |
-| `get_json_object(raw_payload, '$.itemType')` | `item_type` |
-| `get_json_object(raw_payload, '$.globalSalesStatus')` | `global_sales_status` |
-| `CAST(get_json_object(raw_payload, '$.quantity') AS DECIMAL(18,3))` | `qty` |
-| `get_json_object(raw_payload, '$.salesStatus.status')` | `sales_status` |
-| `raw_payload` | `raw_payload` ← keep for array child extraction |
-
-For child array entities, use `from_json` with an **explicit** DDL schema in a separate conformance mapping:
-
-```
-explode(from_json(raw_payload,
-  'array<struct<countryCode:string,salesStatus:string,price:decimal(18,3)>>'))
-```
-
-### Explicit Schema vs Inference
-
-To bypass schema inference entirely when using native json format, pass:
-
-```json
-{
-  "odl_schema_ddl": "struct<itemNo:string,itemType:string,globalSalesStatus:string,...>"
-}
-```
-
-Generate the DDL from a single sample record in Databricks SQL:
-```sql
-SELECT schema_of_json(file_content_string_here)
-```
-Run this once on one representative file — not on the full dataset.
-
-### Z-order Recommendations Per ODL Entity
-
-| Silver Table | Z-ORDER BY |
-|---|---|
-| `pia_odl_itemsummary` | `item_no` |
-| `pia_odl_localretailitem` | `item_no, country_code` |
-| `pia_odl_measurement` | `item_no, type` |
-| `pia_odl_categorymain` | `item_no, id` |
-
-### Analysis Notebook
-
-Run `notebooks/06_analysis/odl_json_profiler.py` in Databricks to:
-- Profile file count, sizes, and array cardinalities **without any parsing cost**
-- Benchmark the three approaches (inference vs binaryFile vs selective extract) on your actual data
-- Generate skeleton source_registry and column_mapping entries for your ODL structure
-
----
-
-## Millions of Small Files (HIP / ODL at Scale)
-
-HIP delivers thousands of small JSON files per day, accumulating to millions of files over time. This is a separate problem from complex JSON structure — and both problems interact.
-
-### The Three Root Causes
-
-**1. Directory listing is O(n)**
-Auto Loader default mode lists the entire ADLS directory on every trigger. With millions of files this takes 10s of minutes of LIST API calls before a single byte of data is read.
-
-**2. Task overhead exceeds data work**
-Each small file becomes one Spark task. 10,000 files of 5 KB each = 10,000 tasks processing 5 KB each. Task scheduling overhead (seconds per task) vastly exceeds actual read time (milliseconds per task).
-
-**3. Landing table file fragmentation**
-Every batch appends many small Parquet files to the Delta landing table. After months of operation: 1M source files → 1M+ small Parquet files. Downstream conformance and query performance degrades badly without regular compaction.
-
-### Solution: Event Grid Notification Mode + Partitioned Landing
-
-```
-HIP delivers 50,000 files/day to ADLS
-         │
-         ▼
-Azure Event Grid subscription         ← O(1) per-file notification, no directory listing
-  filter: Microsoft.Storage.BlobCreated
-  path: /eng511/raw_data/pia/itemsummarypublicprd/
-  endpoint: Azure Event Hub
-         │
-         ▼
-Auto Loader (cloudFiles.useNotifications=true)
-  maxFilesPerTrigger: 50000           ← cap per batch
-  fetchParallelism: 8                 ← parallel metadata workers
-  backfillInterval: 1 day             ← safety net full re-scan
-         │
-         ▼
-Landing Delta table                   ← partitioned by ingest_date
-  binaryFile format, 1 row per file
-  raw_payload STRING column
-  OPTIMIZE after each batch (inline)
-  Z-ORDER BY source_system
-         │
-         ▼
-Conformance + Silver                  ← partition pruning: WHERE ingest_date = '...'
-```
-
-### Full source_options_json for High-Volume ODL Sources
-
-```json
-{
-  "file_ingest_mode": "autoloader",
-  "recursiveFileLookup": "true",
-  "pathGlobFilter": "*.json",
-  "cloudFiles.useNotifications": "true",
-  "cloudFiles.maxFilesPerTrigger": "50000",
-  "cloudFiles.maxBytesPerTrigger": "1g",
-  "cloudFiles.includeExistingFiles": "false",
-  "cloudFiles.backfillInterval": "1 day",
-  "cloudFiles.fetchParallelism": "8",
-  "cloudFiles.schemaEvolutionMode": "rescue",
-  "json_parse_mode": "raw_string",
-  "post_landing_optimize": true,
-  "landing_partition_columns": "ingest_date",
-  "landing_optimize_zorder": "source_system"
-}
-```
-
-Note: `cloudFiles.includeExistingFiles: false` means only new files from the first run onwards are picked up. For initial historical backfill use a separate one-time batch job with an explicit date range filter.
-
-### Expected Performance With This Model
-
-| Problem (without) | With this model |
-|---|---|
-| O(n) file listing: minutes/hours | Event Grid: sub-second O(1) |
-| 1 Spark task per source file | Batched triggers, `maxFilesPerTrigger` cap |
-| Schema inference on every run | `binaryFile` — no schema, fixed columns |
-| 1M+ small Parquet in landing | `post_landing_optimize` compacts after each batch |
-| Partition scan on full table | `WHERE ingest_date = '...'` prunes to one day |
-| OPTIMIZE on full table (slow) | Scoped OPTIMIZE per `ingest_date` partition |
-
-### Daily Compaction SQL (Alternative to Inline OPTIMIZE)
-
-For very high volume (>100K files/day) where inline `post_landing_optimize` adds too much latency, run this as a scheduled job daily at 03:00:
-
-```sql
--- Compact yesterday's landing partition
-OPTIMIZE eng511_development_bronze.bronze_dev.pia_odl_itemsummary_raw
-  WHERE ingest_date = current_date() - 1
-  ZORDER BY (source_system);
-
--- Retain 7 days then vacuum
-VACUUM eng511_development_bronze.bronze_dev.pia_odl_itemsummary_raw
-  RETAIN 168 HOURS;
-```
-
-### Azure Event Grid Setup (One-Time, Platform/IDNAP Admins)
-
-Databricks Auto Loader can auto-create Event Grid subscriptions when given permissions, but for this workspace the recommended approach is manual creation by platform admins:
-
-1. Go to Azure Portal → Storage Account `adlsdnapdevbronze` → Events
-2. Create a new event subscription:
-   - **Event types:** `Microsoft.Storage.BlobCreated` only
-   - **Filter subject:** `/eng511/raw_data/pia/itemsummarypublicprd/`
-   - **Endpoint type:** Azure Event Hubs
-   - **Consumer group:** `databricks-autoloader`
-3. Grant Databricks managed identity the role: **Azure Event Hubs Data Receiver**
-4. Pass Event Hub connection details via Databricks Secrets and then into `source_options_json`:
-   ```json
-   {
-     "cloudFiles.connectionString": "{{secrets/scope/eventhub_connection_string}}",
-     "cloudFiles.queueName": "databricks-autoloader"
-   }
-   ```
-
-Verify notification mode is active after first run:
-```sql
-DESCRIBE HISTORY eng511_development_bronze.bronze_dev.pia_odl_itemsummary_raw;
--- Look for operationParameters.sourceFileNotificationChannelType = "EventHub"
-```
-
-### Check Landing Table File Fragmentation
-
-Run in Databricks SQL to measure current health:
-```sql
-DESCRIBE DETAIL eng511_development_bronze.bronze_dev.pia_odl_itemsummary_raw;
--- numFiles should be < 1000 after OPTIMIZE; avg file size > 128 MB is healthy
-```
-
-If `numFiles` is very large relative to data size, OPTIMIZE has not run or is not keeping up with ingest rate.
-
----
-
-## External Location Setup
-- External locations must be created by platform/IDNAP (metastore-level admins).
-- Use template SQL in:
-	- `sql/ddl/external_locations.sql`
-	- `sql/ddl/external_table_templates.sql`
-- After external locations and grants are ready, onboard sources by setting external table type/path metadata in `config/source_registry.csv`.
-
-## Environment Parameterization
-- `ENVIRONMENT` defaults to `dev` via `config/global_config.yaml` (`${ENVIRONMENT:dev}`).
-- Allowed environments: dev, qa, prod.
-- All environment-specific values (catalog/schema/paths/hosts/secrets) come from env variables and config files.
-- Change environment at runtime: `export ENVIRONMENT=prod && python notebooks/05_orchestration/framework_orchestrator.py --execute`
-
-## Databricks Launchpad Widgets
-- Widget options are centralized in `config/widget_options.yaml`.
-- Notebook helper for widget creation: `notebooks/00_common/databricks_launchpad_widgets.py`.
-- Default widget environment is set to `dev`.
-
-## Example Sources & Walkthroughs
-
-The framework supports multiple data sources. See [Examples](docs/examples/) for end-to-end walkthroughs:
-
-- **CSV/Parquet Files** (File Source): Batch ingest from cloud storage
-- **JDBC Database** (Oracle, PostgreSQL, MySQL): Direct database queries with watermark-based incremental loads
-- **REST APIs** (JSON/JSONL): Polling with pagination and rate limit handling
-- **Streaming** (File Auto Loader): Continuous ingestion as files arrive
-
-Example configurations are provided in `docs/examples/` for common patterns.
-
-## Metadata Schema Documentation
-
-All control metadata follows strict JSON schemas for validation:
-
-- `schemas/source_registry.schema.json` - Source configuration schema
-- `schemas/column_mapping.schema.json` - Column transformation schema
-- `schemas/dq_rules.schema.json` - Data quality rules schema
-- `schemas/publish_rules.schema.json` - Silver publish configuration
-- `schemas/source_options.schema.json` - Source-specific options
-
-Use `python scripts/validate_configs.py` to validate your configs against schemas.
-
-## Raw File Analysis
-- Analysis helper: `notebooks/06_analysis/raw_json_jsonl_analysis.py`
-- Use this to profile and sample raw payload from mounted dropzone paths before downstream conformance.
-
-## Global Configuration Principles
-- No environment-specific values are hardcoded in code.
-- All connection details, catalogs, schemas, checkpoints, and profile settings are loaded from `config/global_config.yaml`.
-- Source-specific behavior is controlled by metadata rows in `source_registry.csv`, `column_mapping.csv`, `dq_rules.csv`, and `publish_rules.csv`.
-- Configuration placeholders like `${UC_CATALOG}` are resolved from environment variables at runtime.
-
-## CI Checks
-- GitHub Actions workflow: `.github/workflows/ci.yml`
-- Checks executed:
-	- `ruff check .`
-	- `python scripts/validate_configs.py`
-	- `pytest -q tests`
-
-## Processing Flow
-1. Source routing from `source_registry`
-2. Ingestion adapter (Auto Loader/JDBC/API/Custom)
-3. Landing write with technical metadata + Bronze DQ checks
-4. Conformance from column mapping
-5. Silver DQ checks from rules metadata
-6. Silver publish (append/merge) with optional optimization
-7. Audit logging (pipeline runs, DQ results, rejects, alerts)
-8. Performance monitoring and alerting
-
-## Advanced Features
-
-### Error Recovery & Transactions
-- **TransactionManager**: Automatic checkpoint creation at each stage
-- **Rollback support**: Failed downstream stages can trigger upstream rollbacks
-- **Resume capability**: Restart from last successful checkpoint (`--resume-from <checkpoint>`)
-- Automatic retry with exponential backoff per source type
-
-### Monitoring & Alerting
-- **AlertManager**: Real-time alerts for:
-  - DQ failure rate thresholds
-  - Retry exhaustion
-  - Performance degradation (vs. baseline)
-- **Metrics collection**: Query execution times, data throughput, row counts
-- **Audit tables**: All actions logged to centralized `audit` schema
-- SQL monitoring queries included: `sql/monitoring/monitoring_queries.sql`
-
-### Performance Optimization
-- **Query optimization advisor**: Recommendations for partitioning, Z-order, statistics
-- **Automatic OPTIMIZE**: Post-publish table optimization for Delta tables
-- **Parallel source processing**: `--parallel <n>` flag for concurrent ingestion (v1.5+)
-
-### Secrets Management
-- **Pluggable backends**: Environment variables (default) or Databricks Secrets
-- **Secure credential handling**: All credentials masked in logs
-- Configure via `secrets.backend` in `global_config.yaml`
-
-### Plugin Architecture
-- **Custom adapters**: Extend framework with custom source types
-- **AdapterRegistry**: Central registry for all ingestion adapters
-- **Auto-discovery**: Load adapters from configured modules
-- Example: Add Kafka, Snowflake, S3 Select support without modifying core
-
-### Infrastructure-as-Code (Terraform)
-- **Auto-provision**: Databases, schemas, tables, permissions
-- **Multi-environment**: Seamless dev/qa/prod deployments
-- **Drift detection**: Terraform validates deployed state
-- See `terraform/` directory for templates and examples
-
-## Architecture & Design Decisions
-
-This framework is built on key architectural principles. See `docs/adr/` for detailed Architecture Decision Records (ADRs):
-
-- **ADR-001**: Auto Loader vs. Delta Live Tables
-- **ADR-002**: CSV Metadata vs. Databricks Control Tables
-- **ADR-003**: Sequential vs. Parallel Processing
-- **ADR-004**: Environment Parameterization Strategy
-- **ADR-005**: Secrets Management Integration
-
-## Deployment & Operations
-
-### Development Environment
-1. Clone repository  
-2. Copy `config/.env.example` to `config/.env`
-3. Fill in your Databricks workspace details
-4. Run `pytest` to validate setup
-
-### Production Deployment
-1. Use Terraform to provision infrastructure: `cd terraform && terraform apply`
-2. Configure Databricks job with orchestrator script
-3. Set environment variables in job configuration
-4. Enable audit logging for compliance tracking
-5. Run monitoring queries to track pipeline health
-
-### Monitoring & Troubleshooting
-- View pipeline health: Query `{catalog}.{audit_schema}.pipeline_runs`
-- Monitor DQ: Query `{catalog}.{audit_schema}.dq_results`
-- Track alerts: Query `{catalog}.{audit_schema}.alerts`
-- Pre-built queries: `sql/monitoring/monitoring_queries.sql`
-
-See `docs/runbook.md` for operational procedures.
-- Code is written as reusable Python modules and can be imported in Databricks notebooks/jobs.
-- Add new products/entities by metadata only for standard ingestion patterns.
-- Use custom hooks only for exceptional source-specific processing.
-- Multi-product, multi-entity support: All control via metadata in CSV or Databricks tables.
-
-## Troubleshooting & Common Issues
-
-- **Missing Environment Variables:** Ensure all required variables are set from `config/.env.example` before running any scripts.
-- **Schema/Table Not Found:** Double-check that all required schemas and tables are created as per the prerequisites section.
-- **Permission Errors:** Verify the Databricks principal has the necessary permissions on catalogs, schemas, and storage paths.
-- **Config Validation Fails:** Run `python scripts/validate_configs.py` and review error messages for missing headers or invalid values.
-- **PySpark/Spark Errors:** For Spark-related issues, ensure you are running in a Databricks or Spark-enabled environment when required.
-- **Test Failures:** Run `pytest -v` for detailed output and check the `tests/` directory for test coverage and expected behaviors.
-
-## Custom Hooks: Extending the Framework
-
-For most sources, onboarding is metadata-driven. If you need to implement custom logic (e.g., special parsing, enrichment, or non-standard ingestion):
-
-1. Create a new Python module in the appropriate `notebooks/` subfolder (e.g., `01_ingestion/` or `02_processing/`).
-2. Implement your custom logic as a function or class.
-3. Reference your custom hook in the relevant metadata (e.g., add a `custom_hook` column in `source_registry.csv` or use a config flag).
-4. Document the hook in `docs/onboarding_guide.md` for future maintainers.
-
-See the `notebooks/` folder for examples and patterns.
-
-## Data Lineage, Monitoring & Change Tracking
-
-- **Audit Tables:** All pipeline runs, DQ results, and rejects are logged in dedicated audit tables for traceability.
-- **Log Table for Lifecycle Tracking:** A dedicated log table should be maintained to track changes and events throughout the lifecycle of each data entity, including onboarding, updates, and archival. This enables full traceability and auditability of all changes.
-- **Execution Plan:** The orchestrator dry-run produces a JSON plan, which can be used for lineage tracking and debugging.
-- **Monitoring:** Integrate with Databricks job monitoring and alerting for production pipelines. Consider extending audit logging for more granular lineage if needed.
-
-## Handling Images and Attachments
-
-The framework can be extended to support images and file attachments as part of the ingested data. To do this:
-- Store image or attachment file paths or binary data in the source data or as references in the metadata.
-- Update ingestion and processing logic to handle binary data or file references, ensuring files are stored in accessible locations (e.g., cloud storage, object store).
-- Document the handling of images/attachments in the onboarding guide and update relevant config files to include these fields.
-
-## Onboarding Tips for New Users
-
-1. **Familiarize with Databricks basics:** Understand clusters, jobs, and workspace navigation.
-2. **Read the onboarding guide:** See `docs/onboarding_guide.md` for step-by-step instructions.
-3. **Start with local verification:** Run unit tests and config validation before attempting full pipeline runs.
-4. **Use sample configs:** Begin with provided examples in `config/` and modify as needed.
-5. **Ask for help:** If stuck, review the troubleshooting section or reach out to the maintainers listed in the repository.
+1. No hardcoded environment values
+2. Metadata-driven behavior
+3. Reusable framework engines
+4. Audit and DQ visibility by default
