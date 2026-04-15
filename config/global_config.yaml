@@ -81,7 +81,7 @@ external_locations:
     - pace
 
 metadata:
-  mode: table
+  mode: csv
   csv_root: ${METADATA_CSV_ROOT:config}
   export_parquet_copy: true
   parquet_copy_root: ${CONTROL_PARQUET_COPY_ROOT:abfss://rngpub@adlsdnapdevsilver.dfs.core.windows.net/eng511/control_parquet/}
